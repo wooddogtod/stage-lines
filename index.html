@@ -608,7 +608,7 @@ function loadConfig(){
       return c;
     }
   }catch(e){}
-  return { disabledDefaults:["First People In","Big Screen","Small Crowd","1 or 2 People","Requests: Young","Requests: Disappointed","Astonished","Requests: Same Genre","Requests: Multiple","Food"], customCategories:{}, fontSize:22, theme:'amber', categoryOrder:[], favorites:[], removedDefaultLines:{}, addedDefaultLines:{}, lineOrder:{}, hasSeenWelcome:false };
+  return { disabledDefaults:["Big Screen","Small Crowd","1 or 2 People","Requests: Young","Requests: Disappointed","Astonished"], customCategories:{}, fontSize:22, theme:'amber', categoryOrder:[], favorites:[], removedDefaultLines:{}, addedDefaultLines:{}, lineOrder:{}, hasSeenWelcome:false };
 }
 function saveConfig(){ try{ localStorage.setItem(CONFIG_KEY, JSON.stringify(config)); }catch(e){} }
 let config = loadConfig();
