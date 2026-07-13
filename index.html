@@ -1020,7 +1020,13 @@ function showGrid(){
   homeBtn.classList.remove('show');
   settingsBtn.classList.add('show');
   headerTitle.classList.add('onGrid');
-  headerTitle.innerHTML = '<svg viewBox="0 0 270 60" width="270" height="60"><g transform="translate(12,14)" fill="var(--dim)"><rect x="3" y="9" width="3" height="10" rx="1.5"/><rect x="10.5" y="4" width="3" height="15" rx="1.5"/><rect x="18" y="12" width="3" height="7" rx="1.5"/></g><g transform="translate(234,14) scale(-1,1) translate(-24,0)" fill="var(--dim)"><rect x="3" y="9" width="3" height="10" rx="1.5"/><rect x="10.5" y="4" width="3" height="15" rx="1.5"/><rect x="18" y="12" width="3" height="7" rx="1.5"/></g><text x="135" y="34" text-anchor="middle" font-family="inherit" font-size="23" font-weight="800" letter-spacing="2" fill="currentColor">STAGE LINES</text><text x="135" y="52" text-anchor="middle" font-family="inherit" font-size="14" fill="var(--dim)">Say It Right - Every Night</text></svg>';
+  headerTitle.innerHTML = '<svg viewBox="0 0 230 60" width="230" height="60"><g transform="translate(0,14)" fill="var(--dim)"><rect x="3" y="9" width="3" height="10" rx="1.5"/><rect x="10.5" y="4" width="3" height="15" rx="1.5"/><rect x="18" y="12" width="3" height="7" rx="1.5"/></g><text id="svgBrandTitle" x="33" y="34" text-anchor="start" font-family="inherit" font-size="23" font-weight="800" letter-spacing="2" fill="currentColor">STAGE LINES</text><text id="svgBrandTagline" x="121" y="52" text-anchor="middle" font-family="inherit" font-size="14" fill="var(--dim)">Say It Right - Every Night</text></svg>';
+  try{
+    const titleEl = document.getElementById('svgBrandTitle');
+    const taglineEl = document.getElementById('svgBrandTagline');
+    const box = titleEl.getBBox();
+    taglineEl.setAttribute('x', box.x + box.width / 2);
+  }catch(err){}
   buildGrid();
 }
 
