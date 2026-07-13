@@ -1,0 +1,1175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Stage Lines</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Stage Lines">
+<meta name="theme-color" content="#0a0a09">
+<style>
+  :root{
+    --bg:#0a0a09;
+    --ink:#f2efe9;
+    --accent:#e2a33d;
+    --dim:#6b6862;
+    --line:#242220;
+    --card:#141312;
+    --used-bg:#0d0d0c;
+    --used-border:#1a1917;
+    --used-ink:#5a584f;
+    --line-font-size:22px;
+  }
+  [data-theme="mono"]{
+    --bg:#000000; --ink:#ffffff; --accent:#ffffff; --dim:#7a7a7a;
+    --line:#2a2a2a; --card:#141414; --used-bg:#0a0a0a; --used-border:#1e1e1e; --used-ink:#555;
+  }
+  [data-theme="light"]{
+    --bg:#f5f3ee; --ink:#141210; --accent:#b5471f; --dim:#8a867d;
+    --line:#ddd8ce; --card:#ffffff; --used-bg:#ece9e1; --used-border:#ddd8ce; --used-ink:#a39d90;
+  }
+  [data-theme="daylight"]{
+    --bg:#ffffff; --ink:#101010; --accent:#1f5c8a; --dim:#8f8f8f;
+    --line:#e2e2e2; --card:#f7f7f7; --used-bg:#efefef; --used-border:#e2e2e2; --used-ink:#b0b0b0;
+  }
+  *{
+    box-sizing:border-box; -webkit-tap-highlight-color:transparent;
+    user-select:none; -webkit-user-select:none;
+    -webkit-touch-callout:none;
+  }
+  html,body{
+    margin:0; padding:0; height:100%;
+    background:var(--bg); color:var(--ink);
+    font-family:-apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+    overscroll-behavior:none;
+  }
+  #app{height:100vh; width:100vw; display:flex; flex-direction:column; max-width:900px; margin:0 auto;}
+
+  /* ---- HEADER ---- */
+  #header{
+    flex-shrink:0; display:flex; align-items:center; justify-content:space-between;
+    gap:10px; padding:env(safe-area-inset-top,16px) 34px 12px 16px;
+    border-bottom:1px solid var(--line);
+  }
+  #homeBtn{
+    background:var(--accent); color:var(--bg); border:none; border-radius:8px;
+    font-size:14px; font-weight:700; padding:9px 14px; letter-spacing:0.02em;
+    display:none; flex-shrink:0;
+  }
+  #homeBtn.show{display:inline-block;}
+  #settingsBtn{
+    background:none; border:1px solid var(--line); color:var(--ink); padding:9px 12px;
+    border-radius:8px; font-size:14px; font-weight:700; display:none; flex-shrink:0;
+  }
+  #settingsBtn.show{display:inline-block;}
+  #headerTitle{
+    font-size:16px; font-weight:700; letter-spacing:0.04em; text-transform:uppercase;
+    color:var(--accent); flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    background:none; border:none; text-align:left; padding:0; font-family:inherit;
+  }
+  #headerTitle.onGrid{
+    color:var(--accent); font-size:19px; font-weight:800; letter-spacing:0.14em;
+    display:flex; align-items:center; gap:8px;
+  }
+  .brandMark{ display:flex; align-items:center; flex-shrink:0; color:var(--dim); }
+  .brandMark svg{ display:block; }
+
+  /* ---- GRID VIEW ---- */
+  #grid{ flex:1; display:flex; flex-direction:column; overflow:hidden; }
+  #reorderHint{
+    flex-shrink:0; text-align:center; font-size:11px; color:var(--dim);
+    padding:10px 16px 0 16px; letter-spacing:0.02em;
+  }
+  #cats{
+    flex:1; display:grid; grid-template-columns:1fr 1fr;
+    gap:10px; align-content:start; overflow-y:auto;
+    padding:16px; -webkit-overflow-scrolling:touch;
+  }
+  @media (min-width:640px){ #cats{ grid-template-columns:1fr 1fr 1fr; } }
+  @media (min-width:900px){ #cats{ grid-template-columns:1fr 1fr 1fr 1fr; } }
+  @media (orientation:landscape) and (max-height:500px){
+    #header{ padding-top:10px; padding-bottom:8px; }
+    #reorderHint{ padding-top:6px; }
+    #cats{ grid-template-columns:repeat(4, 1fr); gap:8px; padding:10px 16px; }
+    .cat{ min-height:56px; padding:10px 12px; }
+    .cat .name{ font-size:14px; }
+    .cat .count{ font-size:10px; margin-top:4px; }
+    #listItems{ padding:8px 16px 16px 16px; gap:6px; }
+    .lineCard{ padding:12px 40px 12px 16px; font-size:calc(var(--line-font-size) * 0.82); }
+  }
+  .cat{
+    background:var(--card); border:1px solid var(--line); border-radius:10px;
+    padding:16px 14px; min-height:72px;
+    display:flex; flex-direction:column; justify-content:space-between;
+    text-align:left; color:var(--ink);
+    touch-action:none;
+  }
+  .cat .name{font-size:16px; font-weight:600; line-height:1.2;}
+  .cat .count{font-size:11px; color:var(--dim); margin-top:6px;}
+  .cat:active{border-color:var(--accent);}
+  .cat.dragging{
+    border-color:var(--accent); transform:scale(1.04);
+    box-shadow:0 10px 26px rgba(0,0,0,.5); z-index:5; opacity:0.96;
+  }
+
+  /* ---- LIST VIEW ---- */
+  #listView{ display:none; flex:1; flex-direction:column; overflow:hidden; }
+  #listView.active{ display:flex; }
+  #listItems{
+    flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch;
+    display:flex; flex-direction:column; gap:8px; padding:12px 16px 24px 16px;
+    max-width:700px; width:100%; margin:0 auto;
+  }
+  .lineCard{
+    background:var(--card); border:1px solid var(--line); border-radius:10px;
+    padding:16px 44px 16px 18px; text-align:left; color:var(--ink);
+    font-size:var(--line-font-size); font-weight:500; line-height:1.4;
+    transition:color .15s ease, background .15s ease, border-color .15s ease;
+    position:relative; touch-action:none;
+  }
+  .lineCard.dragging{
+    border-color:var(--accent); transform:scale(1.02);
+    box-shadow:0 10px 26px rgba(0,0,0,.5); z-index:5; opacity:0.96;
+  }
+  .lineCard .label{
+    display:block; font-size:12px; font-weight:700; letter-spacing:0.06em;
+    text-transform:uppercase; color:var(--accent); margin-bottom:6px;
+  }
+  .lineCard.used{ background:var(--used-bg); border-color:var(--used-border); color:var(--used-ink); }
+  .lineCard.used .label{ color:var(--used-ink); }
+  .lineCard .starBtn{
+    position:absolute; top:10px; right:8px; background:none; border:none;
+    color:var(--accent); font-size:19px; padding:4px 6px; line-height:1;
+  }
+  .lineCard .delLine{
+    position:absolute; bottom:6px; right:8px; background:none; border:none;
+    color:var(--dim); font-size:15px; padding:4px 8px;
+  }
+  .cat.favTile{ border-color:var(--accent); }
+  #addLineRow{
+    display:flex; gap:8px; padding:4px 0 12px 0;
+  }
+  #addLineInput{
+    flex:1; background:var(--card); border:1px solid var(--line); border-radius:8px;
+    color:var(--ink); padding:12px 14px; font-size:16px;
+  }
+  #addLineBtn{
+    background:var(--accent); color:var(--bg); border:none; border-radius:8px;
+    padding:0 16px; font-weight:700; font-size:15px;
+  }
+
+  /* ---- SETTINGS PANEL ---- */
+  #settingsPanel{
+    display:none; position:fixed; inset:0; background:var(--bg); z-index:50;
+    flex-direction:column;
+  }
+  #settingsPanel.active{ display:flex; }
+  #settingsHead{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:env(safe-area-inset-top,16px) 16px 12px 16px; border-bottom:1px solid var(--line);
+  }
+  #settingsHead h2{ font-size:16px; margin:0; letter-spacing:0.04em; text-transform:uppercase; color:var(--dim); }
+  #settingsDone{
+    background:var(--accent); color:var(--bg); border:none; border-radius:8px;
+    font-size:14px; font-weight:700; padding:9px 14px;
+  }
+
+  /* ---- FEEDBACK PANEL ---- */
+  #feedbackPanel{
+    display:none; position:fixed; inset:0; background:var(--bg); z-index:60;
+    flex-direction:column;
+  }
+  #feedbackPanel.active{ display:flex; }
+  #feedbackHead{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:env(safe-area-inset-top,16px) 16px 12px 16px; border-bottom:1px solid var(--line);
+    flex-shrink:0;
+  }
+  #feedbackHead h2{ font-size:16px; margin:0; letter-spacing:0.04em; text-transform:uppercase; color:var(--dim); }
+  #feedbackDone{
+    background:var(--accent); color:var(--bg); border:none; border-radius:8px;
+    font-size:14px; font-weight:700; padding:9px 14px;
+  }
+  #feedbackFrame{ flex:1; width:100%; border:none; }
+  #tabs{ display:flex; border-bottom:1px solid var(--line); flex-shrink:0; }
+  .tabBtn{
+    flex:1; background:none; border:none; color:var(--dim); font-size:13px; font-weight:700;
+    letter-spacing:0.05em; text-transform:uppercase; padding:14px 6px; border-bottom:2px solid transparent;
+  }
+  .tabBtn.active{ color:var(--accent); border-bottom-color:var(--accent); }
+  #settingsBody{ flex:1; overflow-y:auto; padding:16px; max-width:700px; width:100%; margin:0 auto; -webkit-overflow-scrolling:touch; }
+  .tabPane{ display:none; }
+  .tabPane.active{ display:block; }
+
+  .libRow{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:14px 4px; border-bottom:1px solid var(--line);
+  }
+  .libRow .lname{ font-size:16px; font-weight:600; }
+  .lcount{ font-size:12px; color:var(--dim); margin-top:2px; }
+  .switch{
+    width:46px; height:28px; border-radius:14px; background:var(--line); border:none;
+    position:relative; flex-shrink:0; margin-left:12px;
+  }
+  .switch .knob{
+    position:absolute; top:3px; left:3px; width:22px; height:22px; border-radius:50%;
+    background:var(--dim); transition:transform .15s ease, background .15s ease;
+  }
+  .switch.on{ background:var(--accent); }
+  .switch.on .knob{ transform:translateX(18px); background:var(--bg); }
+
+  .sectionLabel{
+    font-size:12px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase;
+    color:var(--dim); margin:18px 0 8px 0;
+  }
+  .textInput{
+    width:100%; background:var(--card); border:1px solid var(--line); border-radius:8px;
+    color:var(--ink); padding:12px 14px; font-size:16px; margin-bottom:8px;
+  }
+  .primaryBtn{
+    background:var(--accent); color:var(--bg); border:none; border-radius:8px;
+    padding:12px 18px; font-weight:700; font-size:15px; width:100%;
+  }
+  .customCard{
+    background:var(--card); border:1px solid var(--line); border-radius:10px;
+    padding:14px; margin-bottom:12px;
+  }
+  .customCard .ccHead{
+    display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;
+  }
+  .customCard .ccName{ font-size:16px; font-weight:700; }
+  .ccDelete{ background:none; border:none; color:var(--dim); font-size:13px; }
+  .ccLine{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:8px 0; border-top:1px solid var(--line); font-size:14px;
+  }
+  .ccLine button{ background:none; border:none; color:var(--dim); font-size:14px; flex-shrink:0; margin-left:8px; }
+
+  .themeGrid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .themeCard{
+    border:2px solid var(--line); border-radius:10px; padding:14px; text-align:left;
+  }
+  .themeCard.selected{ border-color:var(--accent); }
+  .themeSwatch{ width:100%; height:40px; border-radius:6px; margin-bottom:8px; }
+  .themeName{ font-size:14px; font-weight:700; }
+
+  #fontRow{ display:flex; align-items:center; gap:12px; }
+  #fontRow input[type=range]{ flex:1; }
+  #fontPreview{ font-size:var(--line-font-size); }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div id="header">
+    <button id="headerTitle" class="onGrid">Stage Lines</button>
+    <button id="homeBtn">Home</button>
+    <button id="settingsBtn">⚙ Settings</button>
+  </div>
+
+  <div id="grid">
+    <div id="reorderHint">Press and hold a category to rearrange</div>
+    <div id="cats"></div>
+  </div>
+
+  <div id="listView">
+    <div id="listItems"></div>
+  </div>
+
+  <div id="settingsPanel">
+    <div id="settingsHead">
+      <h2>Settings</h2>
+      <button id="settingsDone">Done</button>
+    </div>
+    <div id="tabs">
+      <button class="tabBtn active" data-tab="library">Library</button>
+      <button class="tabBtn" data-tab="mylines">My Lines</button>
+      <button class="tabBtn" data-tab="display">Display</button>
+    </div>
+    <div id="settingsBody">
+
+      <div class="tabPane active" id="pane-library">
+        <div class="sectionLabel">Default categories</div>
+        <div id="libraryList"></div>
+      </div>
+
+      <div class="tabPane" id="pane-mylines">
+        <div class="sectionLabel">Add a category</div>
+        <input id="newCatName" class="textInput" placeholder="Category name, e.g. Sound Problems">
+        <button id="newCatBtn" class="primaryBtn">Add Category</button>
+        <div class="sectionLabel">Your categories</div>
+        <div id="customList"></div>
+      </div>
+
+      <div class="tabPane" id="pane-display">
+        <div class="sectionLabel">Text size</div>
+        <div id="fontRow">
+          <input type="range" id="fontSlider" min="18" max="40" step="1">
+          <span id="fontValue">22px</span>
+        </div>
+        <div class="customCard" style="margin-top:10px;">
+          <div id="fontPreview">This is how a line will look on stage.</div>
+        </div>
+        <div class="sectionLabel">Theme</div>
+        <div class="themeGrid" id="themeGrid"></div>
+
+        <div class="sectionLabel">Backup your settings</div>
+        <button id="exportBtn" class="primaryBtn" style="margin-bottom:8px;">Export Settings</button>
+        <button id="importBtn" class="primaryBtn" style="background:none; border:1px solid var(--line); color:var(--ink);">Import Settings</button>
+        <input type="file" id="importFile" accept="application/json" style="display:none;">
+        <div class="lcount" style="margin-top:8px;">Saves your categories, toggles, and display choices as a small file. No account or sign-in needed, if you're asked to log in anywhere, choose "Save to Files" or "On My iPhone" instead. Keep the file somewhere you can find it, so you can load it back in with Import Settings later, on this phone or a new one.</div>
+
+        <div class="sectionLabel">Feedback</div>
+        <button id="feedbackBtn" class="primaryBtn" style="background:none; border:1px solid var(--line); color:var(--ink);">Suggest a Change</button>
+        <div class="lcount" style="margin-top:8px;">I read every suggestion, but can't promise when or if something gets built.</div>
+      </div>
+
+    </div>
+  </div>
+
+  <div id="feedbackPanel">
+    <div id="feedbackHead">
+      <h2>Suggest a Change</h2>
+      <button id="feedbackDone">Done</button>
+    </div>
+    <iframe id="feedbackFrame" title="Suggest a Change"></iframe>
+  </div>
+
+</div>
+
+<script>
+/*
+  DEFAULT CONTENT LIBRARY.
+  This ships with the app. Buyers customize on top of it, they never edit this
+  directly, their choices (on/off, custom categories, display prefs) live in
+  their own browser storage and layer over this list.
+*/
+const DEFAULTS = {
+  "Start of Gig": [
+    "You're probably a little nervous… wondering what I'm going to think of you.",
+    "I've tuned the guitar, tested the mic, and lowered my expectations appropriately. We're ready to go.",
+    "Evening everyone. I'm Tod, and for the next few hours I'll be the reason you can't hear each other properly.",
+    "I'm Tod. I do this for a living, which is either inspiring or a cautionary tale depending on where you're at in life.",
+    "I appreciate you sharing your evening with me… voluntarily or otherwise",
+    "If it's too loud, just look at me disapprovingly. Musicians are very sensitive to silent judgment.",
+    "If anything's too loud, too quiet, or too annoying … just tell the bar staff. They won't help, but you'll feel better.",
+    "My name is Walter White. This is what happens when the meth money runs out and you have to play Wonderwall for beer.",
+    "If you've never seen me before, prepare to be mildly entertained."
+  ],
+  "Tips": [
+    "Received: I appreciate that. You've unlocked the \"better songs\" setting.",
+    "Big Tip: That's not a tip, that's a financial decision.",
+    "Tips are welcome. Applause is emotionally satisfying but legally useless.",
+    "I do take tips… mostly to prove to my family this is a real job.",
+    "I do take tips… it's the closest thing I've had to a pay rise in 15 years.",
+    "There's a tip option there… completely optional, but heavily encouraged by my landlord.",
+    "I do take tips digitally now…just be gentle.",
+    "I'm paid to be here… but tips determine enthusiasm.",
+    "If you're feeling entertained, the tip jar is here. If not, just smile like you thought about it.",
+    "Tips are welcome. Cash, House Red… or enthusiastic applause…",
+    "For anyone under 40 who's never seen coins and only heard rumours about cash, I do have a card reader up here.",
+    "There's a tip jar here. It funds my ongoing research into local beverages.",
+    "Tip jar's here. It's basically applause you can fold.",
+    "There's a tip jar up here. It's currently as empty as my confidence after that last silence."
+  ],
+  "No Applause": [
+    "That one was a diagnostic. I suspect a slight delay in the audience software. We may have a minor issue, I'll run another one.",
+    "That was the exact amount of applause I expected - I aim for low expectations so it's only up from here.",
+    "That's fine. I didn't need it. I have a dog.",
+    "I appreciate the honesty. Most rooms lie to me with polite applause. You've given me something real.",
+    "I'll just tell my mum it went great. She wasn't here. She'll never know.",
+    "If you get involved, this turns into a much better night, I promise",
+    "I'll just assume you're all clapping on the inside",
+    "We'll get comfortable together. It's like a first date but with witnesses.",
+    "This silence may feel awkward to you, but I can assure you, this is my natural habitat.",
+    "(writing) Good… good… \"crowd appreciates silence between songs.\"",
+    "I'm going to assume you're all professional poker players, because that was a genuinely impressive display of not reacting to anything.",
+    "That's fine. I didn't peak in high school so I know how to handle a room that's underwhelmed.",
+    "Just a heads up - I accept clapping as a form of tipping.",
+    "Not every song's a banger. Some are just legally required to fill time.",
+    "I want you to know that internally, I'm devastated. Externally, we move on.",
+    "Strong start from me, measured response from you. I respect it.",
+    "You're stunned. I get it. Happens a lot.",
+    "Just blink twice if you're here against your will"
+  ],
+  "Random Stuff": [
+    "This next song contains several chords.",
+    "This next song is for everyone who likes the thrill of hearing the same chord progression… over and over.",
+    "So a dyslexic man walks into a bra.",
+    "My friend gave me his Epi-pen when he was dying. It seemed important to him that I have it.",
+    "Bought a friend a fridge for his birthday. You should have seen his face light up when he opened it. Xx",
+    "Also happy 10th birthday to my Tinder profile pic.",
+    "I joined a dating site for people my age… it's called Carbon Dating. Yes I've reached that stage of life where my back goes out more than I do.",
+    "The great thing about dating a woman my own age is I don't have to worry about meeting her parents.",
+    "I'm thinking about getting a Labrador… it's just so many of their owners go blind?",
+    "My friend accused me of being immature, so I farted on his leg and told him to get out of my fort.",
+    "I've been doing this a long time. Not successfully… just a long time.",
+    "This was not my childhood dream, but I'm committed now.",
+    "Two wind turbines in a field. One says to the other \"Do you like music?\" The other replies \"Yes, I'm a big heavy metal fan.\"",
+    "My girlfriend isn't talking to me. She said I ruined her birthday. I didn't even know it was her birthday.",
+    "A man walks into a library and says \"Can I have a burger and chips please?\" The person behind the counter says, \"This is a library!\" The man whispers, \"I'm sorry. Can I have a burger and chips please?\"",
+    "Did you know someone in London gets stabbed every 52 seconds?",
+    "I ordered a chicken and an egg from Amazon. I'll let you know.",
+    "I read that the average person spends six months of their life waiting for red lights. I've spent roughly the same amount of time waiting for someone to request a song I actually know."
+  ],
+  "Drinks": [
+    "If you're on your third drink, we're probably having a great night. If you're on your first, give it time. I've got two sets.",
+    "Alcohol is the only thing that makes small talk feel productive.",
+    "Enjoy your drinks guys. They do a lot of heavy lifting for me.",
+    "Every round you buy makes my songs sound slightly better. That's not an opinion, that's just how alcohol works.",
+    "The house red at most pubs tastes like it was aged in the same barrel as the carpet.",
+    "I've been told red wine is bad for the voice. I've also been told covering Oasis at volume is bad for the voice. I've made peace with contradictions.",
+    "I switched to wine thinking I'd have more control. Instead I've just fast-tracked the exact same outcome with better presentation.",
+    "I've done the maths. One glass of red is doing the work of about three beers, and my playing by the second set can confirm it.",
+    "There's a very specific tipping point with red wine where my banter goes from \"prepared\" to \"unsupervised,\" and it arrives faster than I'd like to admit."
+  ],
+  "Food": [
+    "I hope you're enjoying the food. I like to eat out. Mainly because I've proven I can't be trusted with groceries.",
+    "How's the food? I had beef stew with dumplings. I shouldn't call her that but she's a big girl.",
+    "That chewing has excellent rhythm. Consider joining the band.",
+    "I always order food thinking about my future self… and then completely ignore him.",
+    "Whoever's eating the -- I can see you and I need you to know I'm not angry. Just disappointed that it's not mine.",
+    "There's always one person at the table eyeing someone else's parma with more intensity than most people bring to actual relationships.",
+    "Whoever invented the idea of putting a fried egg on a burger deserves a statue, or at minimum a very firm handshake."
+  ],
+  "Big Screen": [
+    "If I play well you'll remember the song. If I play badly you'll remember the score.",
+    "Gimme One Reason - that song was dedicated to whoever put the performer directly under the 4K distraction machine.",
+    "Every gig has obstacles. Mine is a 75-inch coworker who never takes a break.",
+    "Some venues give you a stage. Some give you a stage and a distraction the size of a garage door.",
+    "I'm just going to pretend you're all looking at me and not the enormous glowing rectangle behind me.",
+    "I want to be clear, I'm not competing with the football. I lost that fight the moment they hung a 75-inch screen behind me."
+  ],
+  "End of Gig": [
+    "Cheers everyone. If you enjoyed that, tell your friends. If not, tell no one.",
+    "That's the gig. I'll be nearby packing up cables and my dignity.",
+    "I'm going to stop now while this is still a skill.",
+    "Thanks for listening folks, I really appreciate it. Take it easy, pace yourselves, and remember tomorrow-you is watching.",
+    "If tonight convinced you to learn guitar, please reconsider. There's already enough of us.",
+    "Drive safe, tip your bartenders, and if anyone asks, I was incredible.",
+    "That's a wrap. Go home, tell one person it was good, and let the rumour do the marketing for me.",
+    "The confidence in this room has gone up considerably since I started playing. I'd love to take credit. It's mostly the bar.",
+    "I can see someone doing the math on whether that next drink is a good idea. Statistically, it never is. Get it anyway."
+  ],
+  "First People In": [
+    "Good evening! Please take any seat you like. We've been very selective about attendance so far.",
+    "Welcome in. If anyone asks, you've been here the whole time and I've been amazing.",
+    "You're the first ones here, which makes you my entire target demographic for the next twenty minutes.",
+    "Sit anywhere you like. Consider it a temporary promotion to VIP, purely because nobody else showed up yet.",
+    "It's just us for now, so if I mess up a lyric, we can agree it never happened.",
+    "You beat the crowd here. That's either commitment or you misread the start time. Either way, welcome."
+  ],
+  "Requests": [
+    "Feel free to request something… I love that brief moment of hope before I say no.",
+    "Happy to take requests… just remember, this is a one-man operation, not Spotify.",
+    "It's on my list, right up there with get my life together and… pornhub … Not sure what's more concerning, that you know that, or how quickly it came out.",
+    "I don't know that one… but if you hum it, I'll still say no.",
+    "I don't know it… I like to keep a little mystery between me and disappointment.",
+    "I don't know it… but I can play something that will make you forget you asked.",
+    "That song and I had a falling out. I don't want to talk about it.",
+    "I've now been asked for 3 songs I don't know, and the answer has aged beautifully.",
+    "Not doing that one. But I will absolutely stand here and absorb your disappointment.",
+    "It's in my head somewhere, right next to my password for MySpace",
+    "I don't know it, and I don't want to ruin it for you forever.",
+    "Played it, but in a different key… and also a different song.",
+    "I'd be unstoppable if I knew all the songs out there. Sadly, I'm just moderately unstoppable."
+  ],
+  "Requests: Same Genre": [
+    "I see the lane you're in. I'm just not licensed for it.",
+    "I love the commitment to the genre.",
+    "I admire how confidently you're ignoring my skill set.",
+    "I feel like I'm being gently recruited."
+  ],
+  "Requests: Multiple": [
+    "Okay… this is starting to feel personal.",
+    "You've discovered the exact three songs I don't know. Impressive",
+    "We're on a streak. Not a good one. Let me play one I do know before my reputation collapses."
+  ],
+  "Requests: Young": [
+    "My version of that song sounds like if your dad joined a boy band.",
+    "I'd play that, but then I'd have to get a haircut that says 'I still believe in my dreams.'",
+    "I'd need a TikTok dance team and a ring light for that one.",
+    "I'm like a jukebox from 1987 - limited selection and no Wi-Fi updates.",
+    "Sorry, I don't have the youth update installed yet.",
+    "That's a great song. You should request it at a better gig.",
+    "I'd love to play that, but my Spotify peaked in 1998."
+  ],
+  "Requests: Disappointed": [
+    "I'm protecting your memory of that song.",
+    "I get it. I've disappointed my parents too.",
+    "That one hurt you more than it hurt me",
+    "Sorry, I'm not AI. I have storage limits.",
+    "Think of the human brain more like a folder rather than library"
+  ],
+  "Bands": [
+    { label:"Pearl Jam", text:"I don't do Pearl Jam. I've made my peace with that. Eddie Vedder has not been informed but I think he'd understand." },
+    { label:"Foo Fighters", text:"I tried Best of You once. The key alone nearly ended my career." },
+    { label:"Metallica", text:"I don't do Metallica. Not because I don't love Metallica. Because I respect Metallica too much to do what would happen up here." },
+    { label:"AC/DC", text:"AC/DC fans are the most optimistic requesters in the room. Absolute faith that I've got it. Touching, really. Completely misplaced, but touching." }
+  ],
+  "End of Set": [
+    "Talk amongst yourself. Some advice for any writers out there. When writing a story about your virginity it is always important to put it in the first person.",
+    "Short break. Stretch your legs, check your phone, and don't text your ex.",
+    "I'll be back shortly unless I get distracted by chips.",
+    "Short break. Check your phone, realise nothing important happened and put it away again.",
+    "I'll be back soon. Stretch, smile at a stranger, and don't overthink it."
+  ],
+  "Small Crowd": [
+    "Small crowd tonight. Which means if this goes badly, there are fewer witnesses. Silver linings.",
+    "I did a headcount. There's more of you than there are of me, so technically we're still a crowd.",
+    "The bartender's seen this whole set twice now. He's basically in the band at this point.",
+    "Small crowd, big acoustics. Every mistake I make gets its own reverb.",
+    "Don't worry, I've calibrated my ego to room size. Tonight it's very small.",
+    "At this size, if you all leave at once, it just looks like a fire drill."
+  ],
+  "1 or 2 People": [
+    "At this point I'm less performing and more just having a very loud conversation with two people who didn't ask for it.",
+    "At this point I know both your drink orders, your names, and roughly your opinions on the last three songs. We're basically a band now.",
+    "I've started treating you two as a focus group. So far the feedback's been polite silence, which I'm choosing to interpret as constructive.",
+    "At this size, if either of you leaves, I lose exactly half my audience, so please, take your bathroom breaks strategically.",
+    "I mean this sincerely, thank you for being here, because the alternative tonight was serenading the bar fridge, and it's a tough crowd.",
+    "Appreciate you both showing up, because without you, tonight's just me, a set list, and a very patient bartender who's heard all of this twice already."
+  ],
+  "Astonished": [
+    "You'd think I told you Christmas was cancelled. It's a (___) song. We'll get through this together.",
+    "I don't know it, but I respect the assumption that a random man in a corner should share your exact taste in music. (Everyone knows it) If it's that universal, I'll happily swap. You play it, I'll heckle from the crowd for once.",
+    "I'm not streaming. I'm remembering. Those are very different technologies.",
+    "Spotify's trained you to believe every song ever recorded is one tap away. I'd like to formally introduce you to the limits of a human brain.",
+    "That's fine, take a moment. I'll wait here while you recalibrate your entire opinion of me over one (____) song.",
+    "You looked at me like you just licked a car battery. I promise the actual damage here is minimal.",
+    "You looked at me like you just stepped on a Lego brick. I know it stings, but you will, in fact, walk again.",
+    "You looked at me like you just smelled a gas leak. I checked the room. It's fine. It's just disappointment, it dissipates the same way.",
+    "I've noticed the outrage reflex works fine. It's just the applause reflex that seems to be broken.",
+    "The bar's been set by an app with unlimited storage and no bladder. I'd like everyone to recalibrate expectations accordingly."
+  ]
+};
+
+const THEMES = [
+  { key:"amber", name:"Stage Amber", bg:"#0a0a09", accent:"#e2a33d" },
+  { key:"mono",  name:"High Contrast", bg:"#000000", accent:"#ffffff" },
+  { key:"light", name:"Bright Room", bg:"#f5f3ee", accent:"#b5471f" },
+  { key:"daylight", name:"Daylight", bg:"#ffffff", accent:"#1f5c8a" }
+];
+
+/* ---------- persisted config (survives reloads, layered over DEFAULTS) ---------- */
+const CONFIG_KEY = 'stageLinesConfig';
+function loadConfig(){
+  try{
+    const c = JSON.parse(localStorage.getItem(CONFIG_KEY));
+    if(c){
+      // migrate old format (plain array of lines) to {lines, enabled}
+      Object.keys(c.customCategories || {}).forEach(cat=>{
+        if(Array.isArray(c.customCategories[cat])){
+          c.customCategories[cat] = { lines: c.customCategories[cat], enabled: true };
+        }
+      });
+      if(!c.categoryOrder) c.categoryOrder = [];
+      if(!c.favorites) c.favorites = [];
+      if(!c.removedDefaultLines) c.removedDefaultLines = {};
+      if(!c.addedDefaultLines) c.addedDefaultLines = {};
+      if(!c.lineOrder) c.lineOrder = {};
+      return c;
+    }
+  }catch(e){}
+  return { disabledDefaults:[], customCategories:{}, fontSize:22, theme:'amber', categoryOrder:[], favorites:[], removedDefaultLines:{}, addedDefaultLines:{}, lineOrder:{} };
+}
+function saveConfig(){ try{ localStorage.setItem(CONFIG_KEY, JSON.stringify(config)); }catch(e){} }
+let config = loadConfig();
+
+/* ---------- runtime "used tonight" state: NOT persisted, wipes on reload ---------- */
+let used = {};
+
+/* ---------- elements ---------- */
+const catsEl = document.getElementById('cats');
+const grid = document.getElementById('grid');
+const listView = document.getElementById('listView');
+const listItems = document.getElementById('listItems');
+const headerTitle = document.getElementById('headerTitle');
+const homeBtn = document.getElementById('homeBtn');
+const settingsBtn = document.getElementById('settingsBtn');
+const settingsPanel = document.getElementById('settingsPanel');
+const settingsDone = document.getElementById('settingsDone');
+const libraryList = document.getElementById('libraryList');
+const customList = document.getElementById('customList');
+const newCatName = document.getElementById('newCatName');
+const newCatBtn = document.getElementById('newCatBtn');
+const fontSlider = document.getElementById('fontSlider');
+const fontValue = document.getElementById('fontValue');
+const fontPreview = document.getElementById('fontPreview');
+const themeGrid = document.getElementById('themeGrid');
+const exportBtn = document.getElementById('exportBtn');
+const importBtn = document.getElementById('importBtn');
+const importFile = document.getElementById('importFile');
+const feedbackBtn = document.getElementById('feedbackBtn');
+const feedbackPanel = document.getElementById('feedbackPanel');
+const feedbackFrame = document.getElementById('feedbackFrame');
+const feedbackDone = document.getElementById('feedbackDone');
+
+let currentCat = null;
+
+function activeData(){
+  const combined = {};
+  Object.keys(DEFAULTS).forEach(cat=>{
+    if(!config.disabledDefaults.includes(cat)) combined[cat] = effectiveDefaultLines(cat);
+  });
+  Object.keys(config.customCategories).forEach(cat=>{
+    if(config.customCategories[cat].enabled) combined[cat] = config.customCategories[cat].lines;
+  });
+  return combined;
+}
+function effectiveDefaultLines(cat){
+  const base = DEFAULTS[cat] || [];
+  const removed = config.removedDefaultLines[cat] || [];
+  const added = config.addedDefaultLines[cat] || [];
+  const filtered = base.filter(item=>{
+    const text = typeof item === 'object' ? item.text : item;
+    return !removed.includes(text);
+  });
+  const combined = filtered.concat(added);
+  const order = config.lineOrder[cat];
+  if(!order || !order.length) return combined;
+  const byText = new Map();
+  combined.forEach(item=>{
+    const text = typeof item === 'object' ? item.text : item;
+    byText.set(text, item);
+  });
+  const known = order.filter(t=>byText.has(t)).map(t=>byText.get(t));
+  const rest = combined.filter(item=>{
+    const text = typeof item === 'object' ? item.text : item;
+    return !order.includes(text);
+  });
+  return known.concat(rest);
+}
+function deleteDefaultLine(cat, text){
+  const added = config.addedDefaultLines[cat] || [];
+  const idx = added.indexOf(text);
+  if(idx > -1){
+    added.splice(idx,1);
+  } else {
+    if(!config.removedDefaultLines[cat]) config.removedDefaultLines[cat] = [];
+    if(!config.removedDefaultLines[cat].includes(text)) config.removedDefaultLines[cat].push(text);
+  }
+  saveConfig();
+}
+function isCustomCat(cat){ return Object.prototype.hasOwnProperty.call(config.customCategories, cat); }
+
+const FAV_KEY = '__FAVORITES__';
+function isFavorite(cat, text){
+  return config.favorites.some(f=>f.cat===cat && f.text===text);
+}
+function toggleFavorite(cat, text, label){
+  const idx = config.favorites.findIndex(f=>f.cat===cat && f.text===text);
+  if(idx > -1) config.favorites.splice(idx,1);
+  else config.favorites.push({ cat, text, label: label || null });
+  saveConfig();
+}
+
+function orderedKeys(data){
+  const keys = Object.keys(data);
+  const order = config.categoryOrder || [];
+  const known = order.filter(k=>keys.includes(k));
+  const rest = keys.filter(k=>!order.includes(k));
+  return [...known, ...rest];
+}
+
+/* ---------- grid / list / home navigation ---------- */
+function buildGrid(){
+  catsEl.innerHTML = '';
+
+  if(config.favorites.length){
+    const favBtn = document.createElement('button');
+    favBtn.className = 'cat favTile';
+    favBtn.innerHTML = `<span class="name">★ Favorites</span><span class="count">${config.favorites.length} line${config.favorites.length===1?'':'s'}</span>`;
+    favBtn.addEventListener('click', ()=> openCategory(FAV_KEY));
+    catsEl.appendChild(favBtn);
+  }
+
+  const data = activeData();
+  orderedKeys(data).forEach(cat=>{
+    const count = data[cat].length;
+    const btn = document.createElement('button');
+    btn.className = 'cat';
+    btn.dataset.cat = cat;
+    btn.innerHTML = `<span class="name">${cat}</span><span class="count">${count} line${count===1?'':'s'}</span>`;
+    attachDragHandlers(btn, cat);
+    catsEl.appendChild(btn);
+  });
+}
+
+/* ---------- long-press to drag-reorder categories ---------- */
+let longPressTimer = null;
+let dragState = null;
+let scrollDrag = null;
+
+function attachDragHandlers(el, cat){
+  el.addEventListener('pointerdown', (e)=>{
+    if(e.pointerType === 'mouse' && e.button !== 0) return;
+    const startX = e.clientX, startY = e.clientY;
+    const pointerId = e.pointerId;
+    let longPressFired = false;
+    let cancelled = false;
+
+    scrollDrag = { startY, startScrollTop: catsEl.scrollTop, active:false };
+
+    longPressTimer = setTimeout(()=>{
+      if(cancelled) return;
+      longPressFired = true;
+      scrollDrag = null;
+      dragState = { el };
+      try{ el.setPointerCapture(pointerId); }catch(err){}
+      el.classList.add('dragging');
+      if(navigator.vibrate) navigator.vibrate(15);
+    }, 450);
+
+    function onMove(ev){
+      const dx = ev.clientX - startX, dy = ev.clientY - startY;
+      if(!longPressFired){
+        if(Math.hypot(dx,dy) > 10){
+          clearTimeout(longPressTimer);
+          cancelled = true;
+          if(scrollDrag) scrollDrag.active = true;
+        }
+        if(scrollDrag && scrollDrag.active){
+          catsEl.scrollTop = scrollDrag.startScrollTop - (ev.clientY - scrollDrag.startY);
+        }
+        return;
+      }
+      if(!dragState) return;
+      const target = document.elementFromPoint(ev.clientX, ev.clientY);
+      const overCat = target && target.closest ? target.closest('.cat') : null;
+      if(overCat && overCat !== dragState.el && overCat.parentElement === catsEl){
+        const children = Array.from(catsEl.children);
+        const dragIdx = children.indexOf(dragState.el);
+        const overIdx = children.indexOf(overCat);
+        if(overIdx > dragIdx){
+          const neighbor = children[dragIdx + 1];
+          if(neighbor) catsEl.insertBefore(neighbor, dragState.el);
+        } else if(overIdx < dragIdx){
+          const neighbor = children[dragIdx - 1];
+          if(neighbor) catsEl.insertBefore(dragState.el, neighbor);
+        }
+      }
+    }
+
+    function onUp(){
+      clearTimeout(longPressTimer);
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onUp);
+      if(longPressFired && dragState){
+        dragState.el.classList.remove('dragging');
+        config.categoryOrder = Array.from(catsEl.children).map(c=>c.dataset.cat);
+        saveConfig();
+        dragState = null;
+      } else if(!cancelled){
+        openCategory(cat);
+      }
+      scrollDrag = null;
+    }
+
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    window.addEventListener('pointercancel', onUp);
+  });
+}
+
+function attachLineDragHandlers(el){
+  el.addEventListener('pointerdown', (e)=>{
+    if(e.pointerType === 'mouse' && e.button !== 0) return;
+    if(e.target.closest('.starBtn') || e.target.closest('.delLine')) return;
+    const startX = e.clientX, startY = e.clientY;
+    const pointerId = e.pointerId;
+    let longPressFired = false;
+    let cancelled = false;
+
+    scrollDrag = { startY, startScrollTop: listItems.scrollTop, active:false };
+
+    longPressTimer = setTimeout(()=>{
+      if(cancelled) return;
+      longPressFired = true;
+      scrollDrag = null;
+      dragState = { el };
+      try{ el.setPointerCapture(pointerId); }catch(err){}
+      el.classList.add('dragging');
+      if(navigator.vibrate) navigator.vibrate(15);
+    }, 450);
+
+    function onMove(ev){
+      const dx = ev.clientX - startX, dy = ev.clientY - startY;
+      if(!longPressFired){
+        if(Math.hypot(dx,dy) > 10){
+          clearTimeout(longPressTimer);
+          cancelled = true;
+          if(scrollDrag) scrollDrag.active = true;
+        }
+        if(scrollDrag && scrollDrag.active){
+          listItems.scrollTop = scrollDrag.startScrollTop - (ev.clientY - scrollDrag.startY);
+        }
+        return;
+      }
+      if(!dragState) return;
+      const target = document.elementFromPoint(ev.clientX, ev.clientY);
+      const overCard = target && target.closest ? target.closest('.lineCard') : null;
+      if(overCard && overCard !== dragState.el && overCard.parentElement === listItems){
+        const children = Array.from(listItems.children).filter(c=>c.classList.contains('lineCard'));
+        const dragIdx = children.indexOf(dragState.el);
+        const overIdx = children.indexOf(overCard);
+        if(overIdx > dragIdx){
+          const neighbor = children[dragIdx + 1];
+          if(neighbor) listItems.insertBefore(neighbor, dragState.el);
+        } else if(overIdx < dragIdx){
+          const neighbor = children[dragIdx - 1];
+          if(neighbor) listItems.insertBefore(dragState.el, neighbor);
+        }
+      }
+    }
+
+    function onUp(){
+      clearTimeout(longPressTimer);
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onUp);
+      if(longPressFired && dragState){
+        dragState.el.classList.remove('dragging');
+        saveLineOrder();
+        dragState = null;
+      }
+      scrollDrag = null;
+    }
+
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    window.addEventListener('pointercancel', onUp);
+  });
+}
+
+function saveLineOrder(){
+  const isFav = currentCat === FAV_KEY;
+  const cards = Array.from(listItems.children).filter(c=>c.classList.contains('lineCard'));
+  const order = cards.map(c=>({ text:c.dataset.lineText, cat:c.dataset.lineCat }));
+
+  if(isFav){
+    const usedIdx = [];
+    const newFavorites = [];
+    order.forEach(o=>{
+      const idx = config.favorites.findIndex((f,i)=> f.cat===o.cat && f.text===o.text && !usedIdx.includes(i));
+      if(idx > -1){ newFavorites.push(config.favorites[idx]); usedIdx.push(idx); }
+    });
+    config.favorites = newFavorites;
+  } else if(isCustomCat(currentCat)){
+    config.customCategories[currentCat].lines = order.map(o=>o.text);
+  } else {
+    config.lineOrder[currentCat] = order.map(o=>o.text);
+  }
+  saveConfig();
+}
+
+function showGrid(){
+  currentCat = null;
+  grid.style.display = 'flex';
+  listView.classList.remove('active');
+  homeBtn.classList.remove('show');
+  settingsBtn.classList.add('show');
+  headerTitle.classList.add('onGrid');
+  headerTitle.innerHTML = '<span class="brandMark"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="3" y="9" width="3" height="10" rx="1.5" fill="currentColor"/><rect x="10.5" y="4" width="3" height="15" rx="1.5" fill="currentColor"/><rect x="18" y="12" width="3" height="7" rx="1.5" fill="currentColor"/></svg></span><span class="brandWord">Stage Lines</span>';
+  buildGrid();
+}
+
+function openCategory(cat){
+  currentCat = cat;
+  grid.style.display = 'none';
+  listView.classList.add('active');
+  homeBtn.classList.add('show');
+  settingsBtn.classList.remove('show');
+  headerTitle.classList.remove('onGrid');
+  headerTitle.textContent = cat === FAV_KEY ? '★ Favorites' : cat;
+  renderList();
+}
+
+function renderList(){
+  listItems.innerHTML = '';
+  const isFav = currentCat === FAV_KEY;
+  const data = activeData();
+  const lines = isFav ? config.favorites : (data[currentCat] || []);
+
+  if(isFav && lines.length === 0){
+    const empty = document.createElement('div');
+    empty.className = 'lcount';
+    empty.style.padding = '20px 4px';
+    empty.textContent = 'No favorites yet. Tap the star on any line to pin it here.';
+    listItems.appendChild(empty);
+    return;
+  }
+
+  lines.forEach((item, i)=>{
+    const isObj = typeof item === 'object' && !isFav;
+    const text = isFav ? item.text : (isObj ? item.text : item);
+    const label = isFav ? item.label : (isObj ? item.label : null);
+    const lineCat = isFav ? item.cat : currentCat;
+    const key = isFav ? `FAV::${lineCat}::${text}` : `${currentCat}::${i}`;
+
+    const card = document.createElement('div');
+    card.className = 'lineCard' + (used[key] ? ' used' : '');
+    card.innerHTML = (label ? `<span class="label">${label}</span>` : '') + text;
+    card.dataset.lineText = text;
+    card.dataset.lineCat = lineCat;
+    attachLineDragHandlers(card);
+
+    const star = document.createElement('button');
+    star.className = 'starBtn';
+    star.textContent = isFavorite(lineCat, text) ? '★' : '☆';
+    star.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      toggleFavorite(lineCat, text, label);
+      renderList();
+    });
+    card.appendChild(star);
+
+    card.addEventListener('click', (e)=>{
+      if(e.target.closest('.starBtn') || e.target.closest('.delLine')) return;
+      used[key] = !used[key];
+      card.classList.toggle('used');
+    });
+
+    if(!isFav){
+      const del = document.createElement('button');
+      del.className = 'delLine';
+      del.textContent = '✕';
+      del.addEventListener('click', (e)=>{
+        e.stopPropagation();
+        if(isCustomCat(currentCat)){
+          config.customCategories[currentCat].lines.splice(i,1);
+          saveConfig();
+        } else {
+          deleteDefaultLine(currentCat, text);
+        }
+        renderList();
+      });
+      card.appendChild(del);
+    }
+    listItems.appendChild(card);
+  });
+
+  if(!isFav){
+    const row = document.createElement('div');
+    row.id = 'addLineRow';
+    row.innerHTML = `<input id="addLineInput" class="textInput" placeholder="Add a line to this category" style="margin-bottom:0;"><button id="addLineBtn">Add</button>`;
+    listItems.appendChild(row);
+    const input = row.querySelector('#addLineInput');
+    const add = ()=>{
+      const val = input.value.trim();
+      if(!val) return;
+      if(isCustomCat(currentCat)){
+        config.customCategories[currentCat].lines.push(val);
+      } else {
+        if(!config.addedDefaultLines[currentCat]) config.addedDefaultLines[currentCat] = [];
+        config.addedDefaultLines[currentCat].push(val);
+      }
+      saveConfig();
+      input.value = '';
+      renderList();
+    };
+    row.querySelector('#addLineBtn').addEventListener('click', add);
+    input.addEventListener('keydown', e=>{ if(e.key==='Enter') add(); });
+  }
+}
+
+homeBtn.addEventListener('click', showGrid);
+headerTitle.addEventListener('click', showGrid);
+
+/* ---------- settings panel ---------- */
+function openSettings(){
+  settingsPanel.classList.add('active');
+  renderLibraryTab();
+  renderCustomTab();
+  renderDisplayTab();
+}
+function closeSettings(){
+  settingsPanel.classList.remove('active');
+  showGrid();
+}
+settingsBtn.addEventListener('click', openSettings);
+settingsDone.addEventListener('click', closeSettings);
+
+document.querySelectorAll('.tabBtn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.tabBtn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.tabPane').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('pane-'+btn.dataset.tab).classList.add('active');
+  });
+});
+
+function renderLibraryTab(){
+  libraryList.innerHTML = '';
+  Object.keys(DEFAULTS).forEach(cat=>{
+    const on = !config.disabledDefaults.includes(cat);
+    const row = document.createElement('div');
+    row.className = 'libRow';
+    row.innerHTML = `
+      <div>
+        <div class="lname">${cat}</div>
+        <div class="lcount">${DEFAULTS[cat].length} lines</div>
+      </div>
+      <button class="switch ${on?'on':''}"><span class="knob"></span></button>`;
+    row.querySelector('.switch').addEventListener('click', function(){
+      const idx = config.disabledDefaults.indexOf(cat);
+      if(idx === -1){ config.disabledDefaults.push(cat); this.classList.remove('on'); }
+      else { config.disabledDefaults.splice(idx,1); this.classList.add('on'); }
+      saveConfig();
+    });
+    libraryList.appendChild(row);
+  });
+}
+
+function renderCustomTab(){
+  customList.innerHTML = '';
+  Object.keys(config.customCategories).forEach(cat=>{
+    const entry = config.customCategories[cat];
+    const card = document.createElement('div');
+    card.className = 'customCard';
+    const linesHtml = entry.lines.map((l,i)=>
+      `<div class="ccLine"><span>${l}</span><button data-i="${i}">✕</button></div>`
+    ).join('');
+    card.innerHTML = `
+      <div class="ccHead">
+        <div class="ccName">${cat}</div>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <button class="switch ${entry.enabled?'on':''}"><span class="knob"></span></button>
+          <button class="ccDelete">Delete</button>
+        </div>
+      </div>
+      ${linesHtml || '<div class="lcount">No lines yet, add some from this category on the home screen.</div>'}
+    `;
+    card.querySelector('.switch').addEventListener('click', function(){
+      entry.enabled = !entry.enabled;
+      this.classList.toggle('on');
+      saveConfig();
+    });
+    card.querySelector('.ccDelete').addEventListener('click', ()=>{
+      delete config.customCategories[cat];
+      saveConfig();
+      renderCustomTab();
+    });
+    card.querySelectorAll('.ccLine button').forEach(b=>{
+      b.addEventListener('click', ()=>{
+        entry.lines.splice(parseInt(b.dataset.i),1);
+        saveConfig();
+        renderCustomTab();
+      });
+    });
+    customList.appendChild(card);
+  });
+}
+
+newCatBtn.addEventListener('click', ()=>{
+  const name = newCatName.value.trim();
+  if(!name) return;
+  if(DEFAULTS[name] || config.customCategories[name]){
+    alert('That category name already exists.');
+    return;
+  }
+  config.customCategories[name] = { lines: [], enabled: true };
+  saveConfig();
+  newCatName.value = '';
+  renderCustomTab();
+});
+
+function renderDisplayTab(){
+  fontSlider.value = config.fontSize;
+  fontValue.textContent = config.fontSize + 'px';
+  document.documentElement.style.setProperty('--line-font-size', config.fontSize+'px');
+
+  themeGrid.innerHTML = '';
+  THEMES.forEach(t=>{
+    const card = document.createElement('button');
+    card.className = 'themeCard' + (config.theme===t.key ? ' selected':'');
+    card.innerHTML = `<div class="themeSwatch" style="background:${t.bg}; border:1px solid ${t.accent};"></div><div class="themeName">${t.name}</div>`;
+    card.addEventListener('click', ()=>{
+      config.theme = t.key;
+      saveConfig();
+      applyTheme();
+      renderDisplayTab();
+    });
+    themeGrid.appendChild(card);
+  });
+}
+
+fontSlider.addEventListener('input', ()=>{
+  config.fontSize = parseInt(fontSlider.value);
+  fontValue.textContent = config.fontSize + 'px';
+  document.documentElement.style.setProperty('--line-font-size', config.fontSize+'px');
+  saveConfig();
+});
+
+function applyTheme(){
+  if(config.theme === 'amber'){ document.documentElement.removeAttribute('data-theme'); }
+  else{ document.documentElement.setAttribute('data-theme', config.theme); }
+}
+
+/* ---------- export / import settings ---------- */
+exportBtn.addEventListener('click', ()=>{
+  const blob = new Blob([JSON.stringify(config, null, 2)], { type:'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'stage-lines-settings.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+});
+
+importBtn.addEventListener('click', ()=> importFile.click());
+importFile.addEventListener('change', ()=>{
+  const file = importFile.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (e)=>{
+    try{
+      const imported = JSON.parse(e.target.result);
+      config = Object.assign(
+        { disabledDefaults:[], customCategories:{}, fontSize:22, theme:'amber', categoryOrder:[], favorites:[], removedDefaultLines:{}, addedDefaultLines:{}, lineOrder:{} },
+        imported
+      );
+      Object.keys(config.customCategories || {}).forEach(cat=>{
+        if(Array.isArray(config.customCategories[cat])){
+          config.customCategories[cat] = { lines: config.customCategories[cat], enabled: true };
+        }
+      });
+      saveConfig();
+      applyTheme();
+      document.documentElement.style.setProperty('--line-font-size', config.fontSize+'px');
+      renderLibraryTab();
+      renderCustomTab();
+      renderDisplayTab();
+      buildGrid();
+      alert('Settings imported.');
+    }catch(err){
+      alert("That file couldn't be read as valid settings.");
+    }
+  };
+  reader.readAsText(file);
+  importFile.value = '';
+});
+
+/* ---------- in-app feedback panel (keeps you inside the app instead of opening Safari) ---------- */
+feedbackBtn.addEventListener('click', ()=>{
+  feedbackFrame.src = 'https://form.jotform.com/261930907191055';
+  feedbackPanel.classList.add('active');
+});
+feedbackDone.addEventListener('click', ()=>{
+  feedbackPanel.classList.remove('active');
+  feedbackFrame.src = '';
+});
+
+/* ---------- boot ---------- */
+document.documentElement.style.setProperty('--line-font-size', config.fontSize+'px');
+applyTheme();
+showGrid();
+</script>
+</body>
+</html>
