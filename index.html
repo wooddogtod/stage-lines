@@ -95,6 +95,16 @@
 
   /* ---- GRID VIEW ---- */
   #grid{ flex:1; display:flex; flex-direction:column; overflow:hidden; }
+  #recentRow{
+    flex-shrink:0; display:flex; gap:8px; overflow-x:auto;
+    padding:10px 16px 0 16px; -webkit-overflow-scrolling:touch;
+  }
+  #recentRow.empty{ display:none; }
+  .recentPill{
+    flex-shrink:0; background:var(--card); border:1px solid var(--line); border-radius:20px;
+    color:var(--ink); font-size:13px; font-weight:600; padding:8px 14px; white-space:nowrap;
+  }
+  .recentPill:active{ border-color:var(--accent); }
   #reorderHint{
     flex-shrink:0; text-align:center; font-size:11px; color:var(--dim);
     padding:8px 16px 0 16px; letter-spacing:0.02em;
@@ -233,6 +243,14 @@
   .tabPane{ display:none; }
   .tabPane.active{ display:block; }
 
+  .profileChip{
+    display:inline-flex; align-items:center; gap:8px;
+    background:var(--card); border:1px solid var(--line); border-radius:20px;
+    padding:8px 8px 8px 14px; margin:0 8px 8px 0; font-size:14px; font-weight:600; color:var(--ink);
+  }
+  .profileChip button{ background:none; border:none; color:var(--dim); font-size:14px; padding:2px 6px; }
+  .profileChip .profileApply{ background:none; border:none; color:var(--ink); font-weight:600; font-size:14px; padding:0; }
+
   .libRow{
     display:flex; align-items:center; justify-content:space-between;
     padding:14px 4px; border-bottom:1px solid var(--line);
@@ -309,6 +327,7 @@
   </div>
 
   <div id="grid">
+    <div id="recentRow"></div>
     <div id="reorderHint">Press and hold a category to rearrange</div>
     <div id="cats"></div>
   </div>
@@ -330,6 +349,11 @@
     <div id="settingsBody">
 
       <div class="tabPane active" id="pane-library">
+        <div class="sectionLabel">Gig Profiles</div>
+        <div id="profilesList" style="margin-bottom:10px;"></div>
+        <button id="saveProfileBtn" class="primaryBtn" style="background:none; border:1px solid var(--line); color:var(--ink); margin-bottom:4px;">Save Current As Profile</button>
+        <div class="lcount" style="margin-bottom:14px;">Save your current on/off toggles as a named profile, like "Wedding" or "Pub Gig", then switch between them in one tap.</div>
+
         <div class="sectionLabel">Default categories</div>
         <div id="libraryList"></div>
       </div>
@@ -640,10 +664,13 @@ function loadConfig(){
       if(!c.addedDefaultLines) c.addedDefaultLines = {};
       if(!c.lineOrder) c.lineOrder = {};
       if(typeof c.hasSeenWelcome === 'undefined') c.hasSeenWelcome = true; // existing users never see the new first-run screen
+      if(!c.gigProfiles) c.gigProfiles = {};
+      if(!c.lineUsageCounts) c.lineUsageCounts = {};
+      if(!c.recentCategories) c.recentCategories = [];
       return c;
     }
   }catch(e){}
-  return { disabledDefaults:["Big Screen","Small Crowd","1 or 2 People","Requests: Young","Requests: Disappointed","Astonished"], customCategories:{}, fontSize:22, theme:'amber', categoryOrder:[], favorites:[], removedDefaultLines:{}, addedDefaultLines:{}, lineOrder:{}, hasSeenWelcome:false };
+  return { disabledDefaults:["Big Screen","Small Crowd","1 or 2 People","Requests: Young","Requests: Disappointed","Astonished"], customCategories:{}, fontSize:22, theme:'amber', categoryOrder:[], favorites:[], removedDefaultLines:{}, addedDefaultLines:{}, lineOrder:{}, hasSeenWelcome:false, gigProfiles:{}, lineUsageCounts:{}, recentCategories:[] };
 }
 function saveConfig(){ try{ localStorage.setItem(CONFIG_KEY, JSON.stringify(config)); }catch(e){} }
 let config = loadConfig();
@@ -662,6 +689,8 @@ const settingsBtn = document.getElementById('settingsBtn');
 const settingsPanel = document.getElementById('settingsPanel');
 const settingsDone = document.getElementById('settingsDone');
 const libraryList = document.getElementById('libraryList');
+const profilesList = document.getElementById('profilesList');
+const saveProfileBtn = document.getElementById('saveProfileBtn');
 const customList = document.getElementById('customList');
 const newCatName = document.getElementById('newCatName');
 const newCatBtn = document.getElementById('newCatBtn');
@@ -726,6 +755,7 @@ function deleteDefaultLine(cat, text){
 function isCustomCat(cat){ return Object.prototype.hasOwnProperty.call(config.customCategories, cat); }
 
 const FAV_KEY = '__FAVORITES__';
+const MOST_USED_KEY = '__MOSTUSED__';
 function isFavorite(cat, text){
   return config.favorites.some(f=>f.cat===cat && f.text===text);
 }
@@ -754,6 +784,15 @@ function buildGrid(){
     favBtn.innerHTML = `<span class="name">★ Favorites</span><span class="count">${config.favorites.length} line${config.favorites.length===1?'':'s'}</span>`;
     favBtn.addEventListener('click', ()=> openCategory(FAV_KEY));
     catsEl.appendChild(favBtn);
+  }
+
+  const usedCount = Object.keys(config.lineUsageCounts).filter(k=>config.lineUsageCounts[k]>0).length;
+  if(usedCount){
+    const mostUsedBtn = document.createElement('button');
+    mostUsedBtn.className = 'cat favTile';
+    mostUsedBtn.innerHTML = `<span class="name">🏆 Most Used</span><span class="count">${usedCount} line${usedCount===1?'':'s'} tracked</span>`;
+    mostUsedBtn.addEventListener('click', ()=> openCategory(MOST_USED_KEY));
+    catsEl.appendChild(mostUsedBtn);
   }
 
   const data = activeData();
@@ -1062,7 +1101,28 @@ function showGrid(){
     const box = titleEl.getBBox();
     taglineEl.setAttribute('x', box.x + box.width / 2);
   }catch(err){}
+  renderRecentRow();
   buildGrid();
+}
+
+function renderRecentRow(){
+  const row = document.getElementById('recentRow');
+  const data = activeData();
+  const valid = config.recentCategories.filter(c=> data[c]);
+  if(!valid.length){
+    row.className = 'empty';
+    row.innerHTML = '';
+    return;
+  }
+  row.className = '';
+  row.innerHTML = '';
+  valid.forEach(cat=>{
+    const pill = document.createElement('button');
+    pill.className = 'recentPill';
+    pill.textContent = cat;
+    pill.addEventListener('click', ()=> openCategory(cat));
+    row.appendChild(pill);
+  });
 }
 
 function openCategory(cat){
@@ -1072,15 +1132,36 @@ function openCategory(cat){
   homeBtn.classList.add('show');
   settingsBtn.classList.remove('show');
   headerTitle.classList.remove('onGrid');
-  headerTitle.textContent = cat === FAV_KEY ? '★ Favorites' : cat;
+  headerTitle.textContent = cat === FAV_KEY ? '★ Favorites' : (cat === MOST_USED_KEY ? '🏆 Most Used' : cat);
+  if(cat !== FAV_KEY && cat !== MOST_USED_KEY){
+    config.recentCategories = [cat, ...config.recentCategories.filter(c=>c!==cat)].slice(0,6);
+    saveConfig();
+  }
   renderList();
 }
 
 function renderList(){
   listItems.innerHTML = '';
   const isFav = currentCat === FAV_KEY;
+  const isMostUsed = currentCat === MOST_USED_KEY;
+  const readOnly = isFav || isMostUsed;
   const data = activeData();
-  const lines = isFav ? config.favorites : (data[currentCat] || []);
+
+  let lines;
+  if(isFav){
+    lines = config.favorites;
+  } else if(isMostUsed){
+    lines = Object.keys(config.lineUsageCounts)
+      .filter(k=>config.lineUsageCounts[k]>0)
+      .sort((a,b)=>config.lineUsageCounts[b]-config.lineUsageCounts[a])
+      .slice(0,20)
+      .map(k=>{
+        const idx = k.indexOf('::');
+        return { cat:k.slice(0,idx), text:k.slice(idx+2), count:config.lineUsageCounts[k] };
+      });
+  } else {
+    lines = data[currentCat] || [];
+  }
 
   if(isFav && lines.length === 0){
     const empty = document.createElement('div');
@@ -1090,20 +1171,29 @@ function renderList(){
     listItems.appendChild(empty);
     return;
   }
+  if(isMostUsed && lines.length === 0){
+    const empty = document.createElement('div');
+    empty.className = 'lcount';
+    empty.style.padding = '20px 4px';
+    empty.textContent = 'No lines tracked yet. Tap lines to mark them used, and this fills in over time.';
+    listItems.appendChild(empty);
+    return;
+  }
 
   lines.forEach((item, i)=>{
-    const isObj = typeof item === 'object' && !isFav;
-    const text = isFav ? item.text : (isObj ? item.text : item);
+    const isObj = typeof item === 'object' && !isFav && !isMostUsed;
+    const text = (isFav || isMostUsed) ? item.text : (isObj ? item.text : item);
     const label = isFav ? item.label : (isObj ? item.label : null);
-    const lineCat = isFav ? item.cat : currentCat;
-    const key = isFav ? `FAV::${lineCat}::${text}` : `${currentCat}::${i}`;
+    const lineCat = (isFav || isMostUsed) ? item.cat : currentCat;
+    const key = isFav ? `FAV::${lineCat}::${text}` : (isMostUsed ? `MU::${lineCat}::${text}` : `${currentCat}::${i}`);
+    const usageKey = `${lineCat}::${text}`;
 
     const card = document.createElement('div');
     card.className = 'lineCard' + (used[key] ? ' used' : '');
-    card.innerHTML = (label ? `<span class="label">${label}</span>` : '') + text;
+    card.innerHTML = (label ? `<span class="label">${label}</span>` : '') + text + (isMostUsed ? `<span class="label" style="display:block; margin-top:6px; color:var(--dim);">Used ${item.count}x</span>` : '');
     card.dataset.lineText = text;
     card.dataset.lineCat = lineCat;
-    attachLineDragHandlers(card);
+    if(!isMostUsed) attachLineDragHandlers(card);
 
     const star = document.createElement('button');
     star.className = 'starBtn';
@@ -1119,9 +1209,13 @@ function renderList(){
       if(e.target.closest('.starBtn') || e.target.closest('.delLine')) return;
       used[key] = !used[key];
       card.classList.toggle('used');
+      if(used[key]){
+        config.lineUsageCounts[usageKey] = (config.lineUsageCounts[usageKey] || 0) + 1;
+        saveConfig();
+      }
     });
 
-    if(!isFav){
+    if(!readOnly){
       const del = document.createElement('button');
       del.className = 'delLine';
       del.textContent = '✕';
@@ -1140,7 +1234,7 @@ function renderList(){
     listItems.appendChild(card);
   });
 
-  if(!isFav){
+  if(!readOnly){
     const row = document.createElement('div');
     row.id = 'addLineRow';
     row.innerHTML = `<input id="addLineInput" class="textInput" placeholder="Add a line to this category" style="margin-bottom:0;"><button id="addLineBtn">Add</button>`;
@@ -1191,6 +1285,7 @@ document.querySelectorAll('.tabBtn').forEach(btn=>{
 });
 
 function renderLibraryTab(){
+  renderProfilesList();
   libraryList.innerHTML = '';
   const header = document.createElement('div');
   header.style.display = 'flex';
@@ -1217,6 +1312,59 @@ function renderLibraryTab(){
     libraryList.appendChild(row);
   });
 }
+
+function renderProfilesList(){
+  profilesList.innerHTML = '';
+  const names = Object.keys(config.gigProfiles);
+  if(!names.length){
+    const empty = document.createElement('div');
+    empty.className = 'lcount';
+    empty.style.marginBottom = '8px';
+    empty.textContent = 'No profiles saved yet.';
+    profilesList.appendChild(empty);
+    return;
+  }
+  names.forEach(name=>{
+    const chip = document.createElement('div');
+    chip.className = 'profileChip';
+    chip.innerHTML = `<button class="profileApply">${name}</button><button class="profileDelete">✕</button>`;
+    chip.querySelector('.profileApply').addEventListener('click', ()=> applyProfile(name));
+    chip.querySelector('.profileDelete').addEventListener('click', ()=>{
+      delete config.gigProfiles[name];
+      saveConfig();
+      renderProfilesList();
+    });
+    profilesList.appendChild(chip);
+  });
+}
+
+function applyProfile(name){
+  const profile = config.gigProfiles[name];
+  if(!profile) return;
+  config.disabledDefaults = [...profile.disabledDefaults];
+  Object.keys(profile.customEnabled || {}).forEach(cat=>{
+    if(config.customCategories[cat]) config.customCategories[cat].enabled = profile.customEnabled[cat];
+  });
+  saveConfig();
+  renderLibraryTab();
+  renderCustomTab();
+  buildGrid();
+}
+
+saveProfileBtn.addEventListener('click', ()=>{
+  const name = prompt('Name this profile, e.g. "Wedding" or "Pub Gig":');
+  if(!name || !name.trim()) return;
+  const customEnabled = {};
+  Object.keys(config.customCategories).forEach(cat=>{
+    customEnabled[cat] = config.customCategories[cat].enabled;
+  });
+  config.gigProfiles[name.trim()] = {
+    disabledDefaults: [...config.disabledDefaults],
+    customEnabled
+  };
+  saveConfig();
+  renderProfilesList();
+});
 
 function renderCustomTab(){
   customList.innerHTML = '';
@@ -1325,7 +1473,7 @@ importFile.addEventListener('change', ()=>{
     try{
       const imported = JSON.parse(e.target.result);
       config = Object.assign(
-        { disabledDefaults:[], customCategories:{}, fontSize:22, theme:'amber', categoryOrder:[], favorites:[], removedDefaultLines:{}, addedDefaultLines:{}, lineOrder:{} },
+        { disabledDefaults:[], customCategories:{}, fontSize:22, theme:'amber', categoryOrder:[], favorites:[], removedDefaultLines:{}, addedDefaultLines:{}, lineOrder:{}, gigProfiles:{}, lineUsageCounts:{}, recentCategories:[] },
         imported
       );
       Object.keys(config.customCategories || {}).forEach(cat=>{
