@@ -65,6 +65,14 @@
   }
   #welcomeStart{ width:100%; max-width:260px; }
 
+  #accessGate{
+    display:flex; position:fixed; inset:0; z-index:300; background:var(--bg);
+    flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; padding:32px;
+  }
+  #accessGate.hide{ display:none; }
+  #accessCodeInput{ margin-bottom:12px; }
+
   /* ---- HEADER ---- */
   #header{
     flex-shrink:0; display:flex; align-items:center; justify-content:space-between;
@@ -310,6 +318,17 @@
 </head>
 <body>
 <div id="app">
+
+  <div id="accessGate">
+    <div id="welcomeMark">
+      <svg width="34" height="34" viewBox="0 0 24 24" fill="none"><rect x="3" y="9" width="3" height="10" rx="1.5" fill="currentColor"/><rect x="10.5" y="4" width="3" height="15" rx="1.5" fill="currentColor"/><rect x="18" y="12" width="3" height="7" rx="1.5" fill="currentColor"/></svg>
+    </div>
+    <div id="welcomeTitle">Stage Lines</div>
+    <div id="welcomeTagline" style="margin-bottom:20px;">Enter your access code to unlock the app.</div>
+    <input id="accessCodeInput" class="textInput" placeholder="Access code" style="max-width:260px; text-align:center;" autocapitalize="off" autocorrect="off">
+    <div id="accessCodeError" style="display:none; color:#d1495b; font-size:13px; margin-bottom:14px;">That code isn't right. Check it and try again.</div>
+    <button id="accessCodeSubmit" class="primaryBtn" style="max-width:260px;">Unlock</button>
+  </div>
 
   <div id="welcomeScreen">
     <div id="welcomeMark">
@@ -691,13 +710,14 @@ function loadConfig(){
       if(!c.addedDefaultLines) c.addedDefaultLines = {};
       if(!c.lineOrder) c.lineOrder = {};
       if(typeof c.hasSeenWelcome === 'undefined') c.hasSeenWelcome = true; // existing users never see the new first-run screen
+      if(typeof c.unlocked === 'undefined') c.unlocked = true; // existing users never get gated retroactively
       if(!c.gigProfiles) c.gigProfiles = {};
       if(!c.lineUsageCounts) c.lineUsageCounts = {};
       if(!c.recentCategories) c.recentCategories = [];
       return c;
     }
   }catch(e){}
-  return { disabledDefaults:["Big Screen","Small Crowd","1 or 2 People","Requests: Young","Requests: Disappointed","Astonished"], customCategories:{}, fontSize:22, theme:'amber', categoryOrder:[], favorites:[], removedDefaultLines:{}, addedDefaultLines:{}, lineOrder:{}, hasSeenWelcome:false, gigProfiles:{}, lineUsageCounts:{}, recentCategories:[] };
+  return { disabledDefaults:["Big Screen","Small Crowd","1 or 2 People","Requests: Young","Requests: Disappointed","Astonished"], customCategories:{}, fontSize:22, theme:'amber', categoryOrder:[], favorites:[], removedDefaultLines:{}, addedDefaultLines:{}, lineOrder:{}, hasSeenWelcome:false, gigProfiles:{}, lineUsageCounts:{}, recentCategories:[], unlocked:false };
 }
 function saveConfig(){ try{ localStorage.setItem(CONFIG_KEY, JSON.stringify(config)); }catch(e){} }
 let config = loadConfig();
@@ -1500,7 +1520,7 @@ importFile.addEventListener('change', ()=>{
     try{
       const imported = JSON.parse(e.target.result);
       config = Object.assign(
-        { disabledDefaults:[], customCategories:{}, fontSize:22, theme:'amber', categoryOrder:[], favorites:[], removedDefaultLines:{}, addedDefaultLines:{}, lineOrder:{}, gigProfiles:{}, lineUsageCounts:{}, recentCategories:[] },
+        { disabledDefaults:[], customCategories:{}, fontSize:22, theme:'amber', categoryOrder:[], favorites:[], removedDefaultLines:{}, addedDefaultLines:{}, lineOrder:{}, gigProfiles:{}, lineUsageCounts:{}, recentCategories:[], unlocked:true },
         imported
       );
       Object.keys(config.customCategories || {}).forEach(cat=>{
@@ -1537,11 +1557,36 @@ feedbackDone.addEventListener('click', ()=>{
 /* ---------- boot ---------- */
 document.documentElement.style.setProperty('--line-font-size', config.fontSize+'px');
 applyTheme();
-showGrid();
 
-if(!config.hasSeenWelcome){
-  document.getElementById('welcomeScreen').classList.add('show');
+const ACCESS_CODE = 'PROMUSO2026'; // change this any time by asking to update it
+
+function proceedPastGate(){
+  document.getElementById('accessGate').classList.add('hide');
+  showGrid();
+  if(!config.hasSeenWelcome){
+    document.getElementById('welcomeScreen').classList.add('show');
+  }
 }
+
+if(config.unlocked){
+  document.getElementById('accessGate').classList.add('hide');
+  proceedPastGate();
+} else {
+  document.getElementById('accessCodeSubmit').addEventListener('click', ()=>{
+    const entered = document.getElementById('accessCodeInput').value.trim().toUpperCase();
+    if(entered === ACCESS_CODE){
+      config.unlocked = true;
+      saveConfig();
+      proceedPastGate();
+    } else {
+      document.getElementById('accessCodeError').style.display = 'block';
+    }
+  });
+  document.getElementById('accessCodeInput').addEventListener('keydown', (e)=>{
+    if(e.key === 'Enter') document.getElementById('accessCodeSubmit').click();
+  });
+}
+
 document.getElementById('welcomeStart').addEventListener('click', ()=>{
   config.hasSeenWelcome = true;
   saveConfig();
