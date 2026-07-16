@@ -1554,6 +1554,13 @@ feedbackDone.addEventListener('click', ()=>{
   feedbackFrame.src = '';
 });
 
+/* ---------- offline support: register the service worker ---------- */
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('./sw.js').catch(()=>{});
+  });
+}
+
 /* ---------- boot ---------- */
 document.documentElement.style.setProperty('--line-font-size', config.fontSize+'px');
 applyTheme();
