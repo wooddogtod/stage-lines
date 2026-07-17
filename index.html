@@ -389,7 +389,7 @@
         <div class="sectionLabel">Text size</div>
         <div id="fontRow">
           <input type="range" id="fontSlider" min="18" max="40" step="1">
-          <span id="fontValue">22px</span>
+          <span id="fontValue">27px</span>
         </div>
         <div class="customCard" style="margin-top:10px;">
           <div id="fontPreview">This is how a line will look on stage.</div>
@@ -718,7 +718,7 @@ function loadConfig(){
       return c;
     }
   }catch(e){}
-  return { disabledDefaults:["Big Screen","Small Crowd","1 or 2 People","Requests: Young","Requests: Disappointed","Astonished"], customCategories:{}, fontSize:22, theme:'amber', categoryOrder:[], favorites:[], removedDefaultLines:{}, addedDefaultLines:{}, lineOrder:{}, hasSeenWelcome:false, gigProfiles:{}, lineUsageCounts:{}, recentCategories:[], unlocked:false };
+  return { disabledDefaults:["Big Screen","Small Crowd","1 or 2 People","Requests: Young","Requests: Disappointed","Astonished"], customCategories:{}, fontSize:27, theme:'amber', categoryOrder:[], favorites:[], removedDefaultLines:{}, addedDefaultLines:{}, lineOrder:{}, hasSeenWelcome:false, gigProfiles:{}, lineUsageCounts:{}, recentCategories:[], unlocked:false };
 }
 function saveConfig(){ try{ localStorage.setItem(CONFIG_KEY, JSON.stringify(config)); }catch(e){} }
 let config = loadConfig();
@@ -1521,7 +1521,7 @@ importFile.addEventListener('change', ()=>{
     try{
       const imported = JSON.parse(e.target.result);
       config = Object.assign(
-        { disabledDefaults:[], customCategories:{}, fontSize:22, theme:'amber', categoryOrder:[], favorites:[], removedDefaultLines:{}, addedDefaultLines:{}, lineOrder:{}, gigProfiles:{}, lineUsageCounts:{}, recentCategories:[], unlocked:true },
+        { disabledDefaults:[], customCategories:{}, fontSize:27, theme:'amber', categoryOrder:[], favorites:[], removedDefaultLines:{}, addedDefaultLines:{}, lineOrder:{}, gigProfiles:{}, lineUsageCounts:{}, recentCategories:[], unlocked:true },
         imported
       );
       Object.keys(config.customCategories || {}).forEach(cat=>{
