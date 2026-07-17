@@ -129,7 +129,7 @@
     #reorderHint{ padding-top:6px; }
     #cats{ grid-template-columns:repeat(4, 1fr); gap:8px; padding:10px 16px; }
     .cat{ min-height:56px; padding:10px 12px; }
-    .cat .name{ font-size:14px; }
+    .cat .name{ font-size:calc(var(--line-font-size) * 0.6); }
     .cat .count{ font-size:10px; margin-top:4px; }
     #listItems{ padding:8px 16px 16px 16px; gap:6px; }
     .lineCard{ padding:12px 40px 12px 16px; font-size:calc(var(--line-font-size) * 0.82); }
@@ -141,7 +141,7 @@
     text-align:left; color:var(--ink);
     touch-action:none;
   }
-  .cat .name{font-size:16px; font-weight:600; line-height:1.2;}
+  .cat .name{font-size:calc(var(--line-font-size) * 0.73); font-weight:600; line-height:1.2;}
   .cat .count{font-size:11px; color:var(--dim); margin-top:6px;}
   .cat:active{border-color:var(--accent);}
   .dragPlaceholder{ visibility:hidden !important; pointer-events:none !important; }
@@ -394,6 +394,7 @@
         <div class="customCard" style="margin-top:10px;">
           <div id="fontPreview">This is how a line will look on stage.</div>
         </div>
+        <div class="lcount" style="margin-top:8px;">This also controls the size of the category names on your home screen.</div>
         <div class="sectionLabel">Theme</div>
         <div class="themeGrid" id="themeGrid"></div>
       </div>
