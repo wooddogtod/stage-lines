@@ -132,7 +132,7 @@
     .cat .name{ font-size:calc(var(--line-font-size) * 0.6); }
     .cat .count{ font-size:10px; margin-top:4px; }
     #listItems{ padding:8px 16px 16px 16px; gap:6px; }
-    .lineCard{ padding:12px 40px 12px 16px; font-size:calc(var(--line-font-size) * 0.82); }
+    .lineCard{ padding:12px 16px 40px 16px; font-size:calc(var(--line-font-size) * 0.82); }
   }
   .cat{
     background:var(--card); border:1px solid var(--line); border-radius:10px;
@@ -160,7 +160,7 @@
   }
   .lineCard{
     background:var(--card); border:1px solid var(--line); border-radius:10px;
-    padding:16px 44px 16px 18px; text-align:left; color:var(--ink);
+    padding:16px 18px 46px 18px; text-align:left; color:var(--ink);
     font-size:var(--line-font-size); font-weight:500; line-height:1.4;
     transition:color .15s ease, background .15s ease, border-color .15s ease;
     position:relative; touch-action:none;
@@ -175,14 +175,26 @@
   }
   .lineCard.used{ background:var(--used-bg); border-color:var(--used-border); color:var(--used-ink); }
   .lineCard.used .label{ color:var(--used-ink); }
-  .lineCard .starBtn{
-    position:absolute; top:10px; right:8px; background:none; border:none;
-    color:var(--accent); font-size:19px; padding:4px 6px; line-height:1;
+  .cardActions{
+    position:absolute; bottom:8px; right:8px; display:flex; gap:2px;
   }
-  .lineCard .delLine{
-    position:absolute; bottom:6px; right:8px; background:none; border:none;
-    color:var(--dim); font-size:15px; padding:4px 8px;
+  .cardActions button{
+    background:none; border:none; padding:6px 8px; line-height:1;
   }
+  .cardActions .starBtn{ color:var(--accent); font-size:19px; }
+  .cardActions .editBtn{ color:var(--dim); font-size:16px; }
+  .cardActions .delLine{ color:var(--dim); font-size:15px; }
+  .lineEditBox{
+    width:100%; background:var(--card); border:1px solid var(--accent); border-radius:8px;
+    color:var(--ink); font-size:var(--line-font-size); font-family:inherit;
+    padding:10px 12px; resize:vertical; min-height:70px;
+  }
+  .lineEditActions{ display:flex; gap:8px; margin-top:10px; }
+  .lineEditActions button{
+    flex:1; border-radius:8px; padding:10px; font-weight:700; font-size:14px; border:none;
+  }
+  .lineEditSave{ background:var(--accent); color:var(--bg); }
+  .lineEditCancel{ background:none; border:1px solid var(--line) !important; color:var(--ink); }
   .cat.favTile{ border-color:var(--accent); }
   #addLineRow{
     display:flex; gap:8px; padding:4px 0 12px 0;
@@ -710,6 +722,7 @@ function loadConfig(){
       if(!c.removedDefaultLines) c.removedDefaultLines = {};
       if(!c.addedDefaultLines) c.addedDefaultLines = {};
       if(!c.lineOrder) c.lineOrder = {};
+      if(!c.editedDefaultLines) c.editedDefaultLines = {};
       if(typeof c.hasSeenWelcome === 'undefined') c.hasSeenWelcome = true; // existing users never see the new first-run screen
       if(typeof c.unlocked === 'undefined') c.unlocked = true; // existing users never get gated retroactively
       if(!c.gigProfiles) c.gigProfiles = {};
@@ -718,7 +731,7 @@ function loadConfig(){
       return c;
     }
   }catch(e){}
-  return { disabledDefaults:["Big Screen","Small Crowd","1 or 2 People","Requests: Young","Requests: Disappointed","Astonished"], customCategories:{}, fontSize:27, theme:'amber', categoryOrder:[], favorites:[], removedDefaultLines:{}, addedDefaultLines:{}, lineOrder:{}, hasSeenWelcome:false, gigProfiles:{}, lineUsageCounts:{}, recentCategories:[], unlocked:false };
+  return { disabledDefaults:["Big Screen","Small Crowd","1 or 2 People","Requests: Young","Requests: Disappointed","Astonished"], customCategories:{}, fontSize:27, theme:'amber', categoryOrder:[], favorites:[], removedDefaultLines:{}, addedDefaultLines:{}, editedDefaultLines:{}, lineOrder:{}, hasSeenWelcome:false, gigProfiles:{}, lineUsageCounts:{}, recentCategories:[], unlocked:false };
 }
 function saveConfig(){ try{ localStorage.setItem(CONFIG_KEY, JSON.stringify(config)); }catch(e){} }
 let config = loadConfig();
@@ -769,11 +782,17 @@ function activeData(){
 function effectiveDefaultLines(cat){
   const base = DEFAULTS[cat] || [];
   const removed = config.removedDefaultLines[cat] || [];
+  const edits = config.editedDefaultLines[cat] || {};
   const added = config.addedDefaultLines[cat] || [];
-  const filtered = base.filter(item=>{
-    const text = typeof item === 'object' ? item.text : item;
-    return !removed.includes(text);
-  });
+  const filtered = base
+    .filter(item=>{
+      const text = typeof item === 'object' ? item.text : item;
+      return !removed.includes(text);
+    })
+    .map(item=>{
+      const text = typeof item === 'object' ? item.text : item;
+      return Object.prototype.hasOwnProperty.call(edits, text) ? edits[text] : item;
+    });
   const combined = filtered.concat(added);
   const order = config.lineOrder[cat];
   if(!order || !order.length) return combined;
@@ -791,13 +810,41 @@ function effectiveDefaultLines(cat){
 }
 function deleteDefaultLine(cat, text){
   const added = config.addedDefaultLines[cat] || [];
-  const idx = added.indexOf(text);
-  if(idx > -1){
-    added.splice(idx,1);
-  } else {
-    if(!config.removedDefaultLines[cat]) config.removedDefaultLines[cat] = [];
-    if(!config.removedDefaultLines[cat].includes(text)) config.removedDefaultLines[cat].push(text);
+  const addedIdx = added.findIndex(item => (typeof item === 'object' ? item.text : item) === text);
+  if(addedIdx > -1){
+    added.splice(addedIdx,1);
+    saveConfig();
+    return;
   }
+  const edits = config.editedDefaultLines[cat] || {};
+  let originalKey = null;
+  for(const k in edits){
+    const vText = typeof edits[k] === 'object' ? edits[k].text : edits[k];
+    if(vText === text){ originalKey = k; break; }
+  }
+  const keyToRemove = originalKey || text;
+  delete edits[keyToRemove];
+  if(!config.removedDefaultLines[cat]) config.removedDefaultLines[cat] = [];
+  if(!config.removedDefaultLines[cat].includes(keyToRemove)) config.removedDefaultLines[cat].push(keyToRemove);
+  saveConfig();
+}
+function editDefaultLine(cat, oldText, newText, label){
+  const added = config.addedDefaultLines[cat] || [];
+  const addedIdx = added.findIndex(item => (typeof item === 'object' ? item.text : item) === oldText);
+  const replacement = label ? { label, text:newText } : newText;
+  if(addedIdx > -1){
+    added[addedIdx] = replacement;
+    saveConfig();
+    return;
+  }
+  if(!config.editedDefaultLines[cat]) config.editedDefaultLines[cat] = {};
+  const edits = config.editedDefaultLines[cat];
+  let originalKey = null;
+  for(const k in edits){
+    const vText = typeof edits[k] === 'object' ? edits[k].text : edits[k];
+    if(vText === oldText){ originalKey = k; break; }
+  }
+  edits[originalKey || oldText] = replacement;
   saveConfig();
 }
 function isCustomCat(cat){ return Object.prototype.hasOwnProperty.call(config.customCategories, cat); }
@@ -1065,7 +1112,7 @@ function attachDragHandlers(el, cat){
 function attachLineDragHandlers(el){
   el.addEventListener('pointerdown', (e)=>{
     if(e.pointerType === 'mouse' && e.button !== 0) return;
-    if(e.target.closest('.starBtn') || e.target.closest('.delLine')) return;
+    if(e.target.closest('.starBtn') || e.target.closest('.delLine') || e.target.closest('.editBtn') || e.target.closest('.lineEditBox') || e.target.closest('.lineEditActions')) return;
     const startX = e.clientX, startY = e.clientY;
     const pointerId = e.pointerId;
     let longPressFired = false;
@@ -1188,6 +1235,52 @@ function openCategory(cat){
   renderList();
 }
 
+function startEditingCard(card, textSpan, actions, editCat, index, lineCat, oldText, label){
+  card.classList.add('editing');
+  actions.style.display = 'none';
+
+  const box = document.createElement('textarea');
+  box.className = 'lineEditBox';
+  box.value = oldText;
+
+  const btnRow = document.createElement('div');
+  btnRow.className = 'lineEditActions';
+  const saveBtn = document.createElement('button');
+  saveBtn.className = 'lineEditSave';
+  saveBtn.textContent = 'Save';
+  const cancelBtn = document.createElement('button');
+  cancelBtn.className = 'lineEditCancel';
+  cancelBtn.textContent = 'Cancel';
+  btnRow.appendChild(saveBtn);
+  btnRow.appendChild(cancelBtn);
+
+  textSpan.replaceWith(box);
+  card.insertBefore(btnRow, actions);
+
+  box.focus();
+  box.setSelectionRange(box.value.length, box.value.length);
+
+  const finish = ()=>{ renderList(); };
+
+  saveBtn.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    const newText = box.value.trim();
+    if(!newText){ finish(); return; }
+    if(isCustomCat(editCat)){
+      config.customCategories[editCat].lines[index] = newText;
+      saveConfig();
+    } else {
+      editDefaultLine(editCat, oldText, newText, label);
+    }
+    finish();
+  });
+  cancelBtn.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    finish();
+  });
+  box.addEventListener('click', (e)=> e.stopPropagation());
+}
+
 function renderList(){
   listItems.innerHTML = '';
   const isFav = currentCat === FAV_KEY;
@@ -1238,10 +1331,16 @@ function renderList(){
 
     const card = document.createElement('div');
     card.className = 'lineCard' + (used[key] ? ' used' : '');
-    card.innerHTML = (label ? `<span class="label">${label}</span>` : '') + text + (isMostUsed ? `<span class="label" style="display:block; margin-top:6px; color:var(--dim);">Used ${item.count}x</span>` : '');
+    const textSpan = document.createElement('div');
+    textSpan.className = 'lineTextWrap';
+    textSpan.innerHTML = (label ? `<span class="label">${label}</span>` : '') + text + (isMostUsed ? `<span class="label" style="display:block; margin-top:6px; color:var(--dim);">Used ${item.count}x</span>` : '');
+    card.appendChild(textSpan);
     card.dataset.lineText = text;
     card.dataset.lineCat = lineCat;
     if(!isMostUsed) attachLineDragHandlers(card);
+
+    const actions = document.createElement('div');
+    actions.className = 'cardActions';
 
     const star = document.createElement('button');
     star.className = 'starBtn';
@@ -1251,10 +1350,10 @@ function renderList(){
       toggleFavorite(lineCat, text, label);
       renderList();
     });
-    card.appendChild(star);
+    actions.appendChild(star);
 
     card.addEventListener('click', (e)=>{
-      if(e.target.closest('.starBtn') || e.target.closest('.delLine')) return;
+      if(e.target.closest('.cardActions') || e.target.closest('.lineEditBox') || e.target.closest('.lineEditActions')) return;
       used[key] = !used[key];
       card.classList.toggle('used');
       if(used[key]){
@@ -1264,6 +1363,15 @@ function renderList(){
     });
 
     if(!readOnly){
+      const editBtn = document.createElement('button');
+      editBtn.className = 'editBtn';
+      editBtn.textContent = '✎';
+      editBtn.addEventListener('click', (e)=>{
+        e.stopPropagation();
+        startEditingCard(card, textSpan, actions, currentCat, i, lineCat, text, label);
+      });
+      actions.appendChild(editBtn);
+
       const del = document.createElement('button');
       del.className = 'delLine';
       del.textContent = '✕';
@@ -1277,8 +1385,9 @@ function renderList(){
         }
         renderList();
       });
-      card.appendChild(del);
+      actions.appendChild(del);
     }
+    card.appendChild(actions);
     listItems.appendChild(card);
   });
 
@@ -1521,7 +1630,7 @@ importFile.addEventListener('change', ()=>{
     try{
       const imported = JSON.parse(e.target.result);
       config = Object.assign(
-        { disabledDefaults:[], customCategories:{}, fontSize:27, theme:'amber', categoryOrder:[], favorites:[], removedDefaultLines:{}, addedDefaultLines:{}, lineOrder:{}, gigProfiles:{}, lineUsageCounts:{}, recentCategories:[], unlocked:true },
+        { disabledDefaults:[], customCategories:{}, fontSize:27, theme:'amber', categoryOrder:[], favorites:[], removedDefaultLines:{}, addedDefaultLines:{}, editedDefaultLines:{}, lineOrder:{}, gigProfiles:{}, lineUsageCounts:{}, recentCategories:[], unlocked:true },
         imported
       );
       Object.keys(config.customCategories || {}).forEach(cat=>{
