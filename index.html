@@ -828,12 +828,19 @@ function deleteDefaultLine(cat, text){
   if(!config.removedDefaultLines[cat].includes(keyToRemove)) config.removedDefaultLines[cat].push(keyToRemove);
   saveConfig();
 }
+function updateOrderOnEdit(cat, oldText, newText){
+  const order = config.lineOrder[cat];
+  if(!order) return;
+  const idx = order.indexOf(oldText);
+  if(idx > -1) order[idx] = newText;
+}
 function editDefaultLine(cat, oldText, newText, label){
   const added = config.addedDefaultLines[cat] || [];
   const addedIdx = added.findIndex(item => (typeof item === 'object' ? item.text : item) === oldText);
   const replacement = label ? { label, text:newText } : newText;
   if(addedIdx > -1){
     added[addedIdx] = replacement;
+    updateOrderOnEdit(cat, oldText, newText);
     saveConfig();
     return;
   }
@@ -845,6 +852,7 @@ function editDefaultLine(cat, oldText, newText, label){
     if(vText === oldText){ originalKey = k; break; }
   }
   edits[originalKey || oldText] = replacement;
+  updateOrderOnEdit(cat, oldText, newText);
   saveConfig();
 }
 function isCustomCat(cat){ return Object.prototype.hasOwnProperty.call(config.customCategories, cat); }
