@@ -1117,7 +1117,7 @@ function attachDragHandlers(el, cat){
   });
 }
 
-function attachLineDragHandlers(el){
+function attachLineDragHandlers(el, onTap){
   el.addEventListener('pointerdown', (e)=>{
     if(e.pointerType === 'mouse' && e.button !== 0) return;
     if(e.target.closest('.starBtn') || e.target.closest('.delLine') || e.target.closest('.editBtn') || e.target.closest('.lineEditBox') || e.target.closest('.lineEditActions')) return;
@@ -1151,7 +1151,7 @@ function attachLineDragHandlers(el){
       moveReorder(ev);
     }
 
-    async function onUp(){
+    async function onUp(upEv){
       clearTimeout(longPressTimer);
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);
@@ -1159,6 +1159,8 @@ function attachLineDragHandlers(el){
       if(longPressFired && reorderState){
         await endReorder();
         saveLineOrder();
+      } else if(!cancelled && onTap){
+        onTap(e);
       }
       scrollDrag = null;
     }
@@ -1345,7 +1347,15 @@ function renderList(){
     card.appendChild(textSpan);
     card.dataset.lineText = text;
     card.dataset.lineCat = lineCat;
-    if(!isMostUsed) attachLineDragHandlers(card);
+    if(!isMostUsed) attachLineDragHandlers(card, (e)=>{
+      if(e.target.closest('.cardActions') || e.target.closest('.lineEditBox') || e.target.closest('.lineEditActions')) return;
+      used[key] = !used[key];
+      card.classList.toggle('used');
+      if(used[key]){
+        config.lineUsageCounts[usageKey] = (config.lineUsageCounts[usageKey] || 0) + 1;
+        saveConfig();
+      }
+    });
 
     const actions = document.createElement('div');
     actions.className = 'cardActions';
@@ -1359,16 +1369,6 @@ function renderList(){
       renderList();
     });
     actions.appendChild(star);
-
-    card.addEventListener('click', (e)=>{
-      if(e.target.closest('.cardActions') || e.target.closest('.lineEditBox') || e.target.closest('.lineEditActions')) return;
-      used[key] = !used[key];
-      card.classList.toggle('used');
-      if(used[key]){
-        config.lineUsageCounts[usageKey] = (config.lineUsageCounts[usageKey] || 0) + 1;
-        saveConfig();
-      }
-    });
 
     if(!readOnly){
       const editBtn = document.createElement('button');
