@@ -1293,6 +1293,7 @@ function startEditingCard(card, textSpan, actions, editCat, index, lineCat, oldT
 
 function renderList(){
   listItems.innerHTML = '';
+  listItems.scrollTop = 0;
   const isFav = currentCat === FAV_KEY;
   const isMostUsed = currentCat === MOST_USED_KEY;
   const readOnly = isFav || isMostUsed;
