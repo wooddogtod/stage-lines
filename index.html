@@ -174,6 +174,11 @@
     text-transform:uppercase; color:var(--accent); margin-bottom:6px;
   }
   .lineCard.used{ background:var(--used-bg); border-color:var(--used-border); color:var(--used-ink); }
+  .lineCard .usedHint{ display:none; }
+  .lineCard.used .usedHint{
+    display:block; font-size:12px; font-style:italic; color:var(--used-ink);
+    margin-top:8px; opacity:0.8;
+  }
   .lineCard.used .label{ color:var(--used-ink); }
   .cardActions{
     position:absolute; bottom:8px; right:8px; display:flex; gap:2px;
@@ -929,11 +934,24 @@ function animateReflow(container, selector, mutate){
       el.style.transition = 'none';
       el.style.transform = `translate(${dx}px, ${dy}px)`;
       requestAnimationFrame(()=>{
-        el.style.transition = 'transform 180ms ease';
-        el.style.transform = '';
+        requestAnimationFrame(()=>{
+          el.style.transition = 'transform 500ms cubic-bezier(0.4, 0, 0.2, 1)';
+          el.style.transform = '';
+        });
       });
     }
   });
+}
+
+function reorderLinesByUsedState(){
+  const cards = Array.from(listItems.querySelectorAll('.lineCard'));
+  const sorted = cards.slice().sort((a,b)=>{
+    const usedA = a.classList.contains('used') ? 1 : 0;
+    const usedB = b.classList.contains('used') ? 1 : 0;
+    if(usedA !== usedB) return usedA - usedB;
+    return Number(a.dataset.originalIndex) - Number(b.dataset.originalIndex);
+  });
+  sorted.forEach(el => listItems.appendChild(el));
 }
 
 function startReorder({ el, container, selector, pointerId }){
@@ -1344,17 +1362,24 @@ function renderList(){
     card.className = 'lineCard' + (used[key] ? ' used' : '');
     const textSpan = document.createElement('div');
     textSpan.className = 'lineTextWrap';
-    textSpan.innerHTML = (label ? `<span class="label">${label}</span>` : '') + text + (isMostUsed ? `<span class="label" style="display:block; margin-top:6px; color:var(--dim);">Used ${item.count}x</span>` : '');
+    textSpan.innerHTML = (label ? `<span class="label">${label}</span>` : '') + text + (isMostUsed ? `<span class="label" style="display:block; margin-top:6px; color:var(--dim);">Used ${item.count}x</span>` : '') + (isMostUsed ? '' : '<span class="usedHint">Tap to bring back</span>');
     card.appendChild(textSpan);
     card.dataset.lineText = text;
     card.dataset.lineCat = lineCat;
+    card.dataset.originalIndex = i;
     if(!isMostUsed) attachLineDragHandlers(card, (e)=>{
       if(e.target.closest('.cardActions') || e.target.closest('.lineEditBox') || e.target.closest('.lineEditActions')) return;
       used[key] = !used[key];
       card.classList.toggle('used');
+      clearTimeout(card._slideTimer);
       if(used[key]){
         config.lineUsageCounts[usageKey] = (config.lineUsageCounts[usageKey] || 0) + 1;
         saveConfig();
+        card._slideTimer = setTimeout(()=>{
+          if(used[key]) animateReflow(listItems, '.lineCard', reorderLinesByUsedState);
+        }, 2000);
+      } else {
+        animateReflow(listItems, '.lineCard', reorderLinesByUsedState);
       }
     });
 
