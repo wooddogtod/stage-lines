@@ -943,17 +943,6 @@ function animateReflow(container, selector, mutate){
   });
 }
 
-function reorderLinesByUsedState(){
-  const cards = Array.from(listItems.querySelectorAll('.lineCard'));
-  const sorted = cards.slice().sort((a,b)=>{
-    const usedA = a.classList.contains('used') ? 1 : 0;
-    const usedB = b.classList.contains('used') ? 1 : 0;
-    if(usedA !== usedB) return usedA - usedB;
-    return Number(a.dataset.originalIndex) - Number(b.dataset.originalIndex);
-  });
-  sorted.forEach(el => listItems.appendChild(el));
-}
-
 function startReorder({ el, container, selector, pointerId }){
   const rect = el.getBoundingClientRect();
   const baseClass = el.className;
@@ -1350,7 +1339,21 @@ function renderList(){
     return;
   }
 
-  lines.forEach((item, i)=>{
+  const indexed = lines.map((item, i)=>{
+    const isObj = typeof item === 'object' && !isFav && !isMostUsed;
+    const text = (isFav || isMostUsed) ? item.text : (isObj ? item.text : item);
+    const lineCat = (isFav || isMostUsed) ? item.cat : currentCat;
+    const key = isFav ? `FAV::${lineCat}::${text}` : (isMostUsed ? `MU::${lineCat}::${text}` : `${currentCat}::${i}`);
+    return { item, i, isUsed: isMostUsed ? false : !!used[key] };
+  });
+  if(!isMostUsed){
+    indexed.sort((a,b)=>{
+      if(a.isUsed !== b.isUsed) return a.isUsed ? 1 : -1;
+      return a.i - b.i;
+    });
+  }
+
+  indexed.forEach(({item, i})=>{
     const isObj = typeof item === 'object' && !isFav && !isMostUsed;
     const text = (isFav || isMostUsed) ? item.text : (isObj ? item.text : item);
     const label = isFav ? item.label : (isObj ? item.label : null);
@@ -1366,20 +1369,13 @@ function renderList(){
     card.appendChild(textSpan);
     card.dataset.lineText = text;
     card.dataset.lineCat = lineCat;
-    card.dataset.originalIndex = i;
     if(!isMostUsed) attachLineDragHandlers(card, (e)=>{
       if(e.target.closest('.cardActions') || e.target.closest('.lineEditBox') || e.target.closest('.lineEditActions')) return;
       used[key] = !used[key];
       card.classList.toggle('used');
-      clearTimeout(card._slideTimer);
       if(used[key]){
         config.lineUsageCounts[usageKey] = (config.lineUsageCounts[usageKey] || 0) + 1;
         saveConfig();
-        card._slideTimer = setTimeout(()=>{
-          if(used[key]) animateReflow(listItems, '.lineCard', reorderLinesByUsedState);
-        }, 2000);
-      } else {
-        animateReflow(listItems, '.lineCard', reorderLinesByUsedState);
       }
     });
 
