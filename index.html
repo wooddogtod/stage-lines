@@ -187,8 +187,8 @@
     background:none; border:none; padding:6px 8px; line-height:1;
   }
   .cardActions .starBtn{ color:var(--accent); font-size:calc(var(--line-font-size) * 0.75); }
-  .cardActions .editBtn{ color:var(--dim); font-size:calc(var(--line-font-size) * 0.75); }
-  .cardActions .delLine{ color:var(--dim); font-size:calc(var(--line-font-size) * 0.75); }
+  .cardActions .editBtn{ color:var(--dim); font-size:calc(var(--line-font-size) * 0.87); }
+  .cardActions .delLine{ color:var(--dim); font-size:calc(var(--line-font-size) * 0.97); }
   .lineEditBox{
     width:100%; background:var(--card); border:1px solid var(--accent); border-radius:8px;
     color:var(--ink); font-size:var(--line-font-size); font-family:inherit;
@@ -477,15 +477,8 @@ const DEFAULTS = {
     "Just blink twice if you're here against your will"
   ],
   "Heckler": [
-    "I get heckled sometimes. I choose to see it as free, unsolicited feedback from someone with no relevant experience.",
-    "I'll respond to that once I've finished being the one with the microphone.",
-    "We'll blame the bar for that one. Seems fair, they did the heavy lifting.",
-    "Feisty. I like it. Wrong night for it, but I like it.",
-    "I've been doing this a long time. You're not the worst heckler I've had, you're just the loudest one tonight.",
     "Interesting take. I'll be ignoring it with the same energy you gave it.",
     "I appreciate the passion. I don't share it, but I appreciate it.",
-    "There it is folks, the sound of someone who's had exactly one and a half drinks.",
-    "Ladies and gentlemen, we've got a live one. Please, no photos, he's really shy.",
     "We'll let it slide. Alcohol's got a strong opinion tonight, and he's just the delivery method.",
     "I'll trade you spots for one song. Let's see how brave that opinion is up close.",
     "He's clearly got a lot to say. Someone get him a stool and a setlist.",
@@ -498,7 +491,6 @@ const DEFAULTS = {
     "The silence from his own table is doing more damage than anything I could say.",
     "That's your opinion, and it's staying that way, over there, with you.",
     "I'll take that as enthusiasm, since the alternative's more effort than it's worth.",
-    "I'll let that one go. Sounds like it came from the drink, not the man.",
     "I see you've decided the whole room needed to hear that, personally, out loud, right now.",
     "That's the loudest cry for attention I've heard since my own soundcheck.",
     "You've got the room's attention now. Not sure what you're going to do with it, but you've got it."
@@ -540,6 +532,35 @@ const DEFAULTS = {
     "I'm flattered you think three chords and a capo can carry a genre that requires actual rage.",
     "You've asked so consistently I'm starting to think you know I can't do it and you're just enjoying the process.",
     "At this point saying no to you has become its own recurring bit in my set, and honestly, it might be the strongest material I've got tonight."
+  ],
+  "Requests: Same Song": [
+    "What are your ears painted on or something?",
+    "That's the third time you've asked. I'm flattered, but also slightly concerned.",
+    "Same song, same request, same me saying maybe later.",
+    "I'm starting to think you just like saying the title out loud at this point.",
+    "That's twice now. I'm not playing hard to get, I'm just playing something else.",
+    "I'm going to need you to ask a third time before I even consider pretending to think about it.",
+    "You keep asking like the answer's going to change if you say it slower.",
+    "That request hasn't gotten any more likely to happen since the last time you made it.",
+    "I don't know it any better this time than I did the last two times you asked.",
+    "Asking again doesn't unlock a hidden version of me that suddenly knows the song.",
+    "I promise I'm not secretly saving it for later. I genuinely just don't know it.",
+    "The information hasn't changed since you last asked. I still don't have it.",
+    "There's no version of tonight where the fourth ask works better than the first three.",
+    "I'd need to learn an entire new song between now and the next time you ask, and I haven't managed that yet.",
+    "I'm flattered you think I can learn a brand new song while simultaneously playing a different one live, but my talents, sadly, stop just short of that.",
+    "I appreciate the confidence that I could pick up an entire new song mid-performance, I just don't want to shatter that illusion tonight.",
+    "You clearly think I'm capable of learning a song in real time while playing another one. I wish that were true. It is not.",
+    "I love that you think I've got a hidden setting where I learn new material while performing something else entirely. I don't."
+  ],
+  "Requests: Phone": [
+    "I don't read screens mid-song. Hold that thought, and possibly the phone, a bit longer.",
+    "That's a very bright rectangle you're showing me in a very dark room. I'll process it once my eyes recover.",
+    "You've basically handed me a pop quiz mid-performance, and I did not study.",
+    "I appreciate the faith that I'm secretly a fully licensed streaming service, but I'm one man and a guitar.",
+    "That app has about ninety million songs on it. I have considerably fewer.",
+    "Whatever's on that screen took a team of engineers and a server farm. I've got a capo and a rough memory.",
+    "That phone can access every song ever recorded. I can access maybe four hundred, on a good day."
   ],
   "Requests: Multiple": [
     "Okay… this is starting to feel personal.",
@@ -591,18 +612,15 @@ const DEFAULTS = {
     { label:"Van Halen", text:"That guitar solo took Eddie years to perfect. I've had this instrument since Tuesday." }
   ],
   "Tips": [
-    "Received: I appreciate that. You've unlocked the \"better songs\" setting.",
-    "Big Tip: That's not a tip, that's a financial decision.",
     "Tips are welcome. Applause is emotionally satisfying but legally useless.",
     "I do take tips… mostly to prove to my family this is a real job.",
     "I do take tips… it's the closest thing I've had to a pay rise in years.",
-    "There's a tip option there… completely optional, but heavily encouraged by my landlord.",
+    "Yes there's a tip option there… completely optional, but heavily encouraged by my landlord.",
     "I do take tips digitally now…just be gentle.",
-    "I'm paid to be here… but tips determine enthusiasm.",
+    "Yes I'm paid to be here… but tips determine enthusiasm.",
     "If you're feeling entertained, the tip jar is here. If not, just smile like you thought about it.",
     "Tips are welcome. Cash, House Red… or enthusiastic applause…",
-    "For anyone under 40 who's never seen coins and only heard rumours about cash, I do have a card reader up here.",
-    "There's a tip jar here. It funds my ongoing research into local beverages.",
+    "Yes there's a tip jar here. It funds my ongoing research into local beverages.",
     "Tip jar's here. It's basically applause you can fold.",
     "There's a tip jar up here. It's currently as empty as my confidence after that last silence."
   ],
@@ -641,6 +659,23 @@ const DEFAULTS = {
     "There's always one person at the table eyeing someone else's parma with more intensity than most people bring to actual relationships.",
     "Whoever invented the idea of putting a fried egg on a burger deserves a statue, or at minimum a very firm handshake."
   ],
+    "Family": [
+    "Nice to have the family here tonight. Nothing says \"relax and enjoy yourself\" like the people who remember you wetting the bed.",
+    "My family's here tonight, so if this goes badly it'll be brought up every Christmas basically until I die.",
+    "The family's here tonight. So if you enjoy the show, tell them... because they still think I should've kept a real job.",
+    "Nice to have my niece and nephew here tonight. It's good they get to see what unemployment looks like with stage lighting.",
+    "I've got a few cousins here tonight. I haven't seen some of them in so long I almost introduced myself.",
+    "My sister's here. So if I get too full of myself, she'll sort that out in the first break.",
+    "My mum's here tonight. So if you enjoy the show, she's taking full credit.",
+    "Good to have my boy here tonight. He still thinks this is a real job, so let's not ruin that for him just yet.",
+    "My son's here tonight. It's nice having someone in the crowd who legally has to pretend I'm funny.",
+    "My son came to watch. Either he loves me... or he needed a lift.",
+    "My daughter's here. If you see her slowly sliding lower in her chair, that's just years of practice.",
+    "She's my biggest supporter... as long as I don't start dancing.",
+    "My dad's watching tonight. No pressure... just decades of expectations.",
+    "My dad's here. He's been supporting me for years. Mostly financially in the beginning.",
+    "My wife/husband's here. It's nice having someone in the crowd who's contractually obligated to tolerate me."
+  ],
   "End of Set": [
     "Short break. Stretch your legs, check your phone, and don't text your ex.",
     "I'll be back shortly unless I get distracted by chips.",
@@ -669,6 +704,20 @@ const DEFAULTS = {
     "The confidence in this room has gone up considerably since I started playing. I'd love to take credit. It's mostly the bar.",
     "I can see someone doing the math on whether that next drink is a good idea. Statistically, it never is. Get it anyway."
   ],
+  "Encore": [
+    "One more? I've technically already packed up in my head.",
+    "I can do one more, but my enthusiasm's already loaded the car.",
+    "I've got one more song in me, and roughly zero more after that.",
+    "One more, purely because you asked nicely and I have no real backbone."
+  ],
+  "Tuning": [
+    "Bear with me, I'm tuning. This is the least exciting part of the show, and somehow also the most technical.",
+    "Give me a second, one of these strings has decided tonight's the night to have an opinion.",
+    "Tuning up. Think of this as a very small, very boring magic trick.",
+    "Quick tune. Not for me, for you. Nobody wants the alternative.",
+    "Hang tight, I'm having a small, private argument with this instrument.",
+    "This won't take long. Long enough to feel awkward, not long enough to apologise for."
+  ],
   "First People In": [
     "Good evening! Please take any seat you like. We've been very selective about attendance so far.",
     "Welcome in. If anyone asks, you've been here the whole time and I've been amazing.",
@@ -679,7 +728,7 @@ const DEFAULTS = {
   ],
   "Big Screen": [
     "If I play well you'll remember the song. If I play badly you'll remember the score.",
-    "Gimme One Reason - that song was dedicated to whoever put the performer directly under the 4K distraction machine.",
+    "before playing Gimme One Reason - this song is dedicated to whoever put the performer directly under the 4K distraction machine.",
     "Every gig has obstacles. Mine is a 75-inch coworker who never takes a break.",
     "Some venues give you a stage. Some give you a stage and a distraction the size of a garage door.",
     "I'm just going to pretend you're all looking at me and not the enormous glowing rectangle behind me.",
@@ -702,6 +751,7 @@ const DEFAULTS = {
     "Appreciate you both showing up, because without you, tonight's just me, a set list, and a very patient bartender who's heard all of this twice already."
   ]
 };
+
 
 const THEMES = [
   { key:"amber", name:"Stage Amber", bg:"#0a0a09", accent:"#e2a33d" },
@@ -736,7 +786,7 @@ function loadConfig(){
       return c;
     }
   }catch(e){}
-  return { disabledDefaults:["Big Screen","Small Crowd","1 or 2 People","Requests: Young","Requests: Disappointed","Astonished"], customCategories:{}, fontSize:30, theme:'amber', categoryOrder:[], favorites:[], removedDefaultLines:{}, addedDefaultLines:{}, editedDefaultLines:{}, lineOrder:{}, hasSeenWelcome:false, gigProfiles:{}, lineUsageCounts:{}, recentCategories:[], unlocked:false };
+  return { disabledDefaults:[], customCategories:{}, fontSize:30, theme:'amber', categoryOrder:[], favorites:[], removedDefaultLines:{}, addedDefaultLines:{}, editedDefaultLines:{}, lineOrder:{}, hasSeenWelcome:false, gigProfiles:{}, lineUsageCounts:{}, recentCategories:[], unlocked:false };
 }
 function saveConfig(){ try{ localStorage.setItem(CONFIG_KEY, JSON.stringify(config)); }catch(e){} }
 let config = loadConfig();
@@ -1456,6 +1506,10 @@ function openSettings(){
   renderDisplayTab();
 }
 function closeSettings(){
+  const idleEl = document.getElementById('practiceIdle');
+  const activeEl = document.getElementById('practiceActive');
+  if(idleEl) idleEl.style.display = 'block';
+  if(activeEl) activeEl.style.display = 'none';
   settingsPanel.classList.remove('active');
   showGrid();
 }
