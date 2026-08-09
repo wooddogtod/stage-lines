@@ -381,6 +381,7 @@
       <button class="tabBtn active" data-tab="library">Library</button>
       <button class="tabBtn" data-tab="mylines">My Lines</button>
       <button class="tabBtn" data-tab="display">Display</button>
+      <button class="tabBtn" data-tab="practice">Practice</button>
     </div>
     <div id="settingsBody">
 
@@ -414,6 +415,32 @@
         <div class="lcount" style="margin-top:8px;">This also controls the size of the category names on your home screen.</div>
         <div class="sectionLabel">Theme</div>
         <div class="themeGrid" id="themeGrid"></div>
+      </div>
+
+      <div class="tabPane" id="pane-practice">
+        <div class="sectionLabel">Practice Room</div>
+        <div class="lcount" style="margin-bottom:14px;">A quick scenario. Think of your own reply, then reveal what the app would say. Skip to see another option, or favourite the one that fits best, it'll move to the top of that category so it's the first thing you see at a real gig.</div>
+        <div id="practiceIdle">
+          <button id="practiceStartBtn" class="primaryBtn">Start a Scenario</button>
+        </div>
+        <div id="practiceActive" style="display:none;">
+          <div class="customCard" style="margin-bottom:14px;">
+            <div id="practiceScenarioText" style="font-size:var(--line-font-size); line-height:1.5;"></div>
+          </div>
+          <button id="practiceRevealBtn" class="primaryBtn">Reveal Answer</button>
+          <div id="practiceReveal" style="display:none;">
+            <div class="sectionLabel">The app would say:</div>
+            <div class="customCard">
+              <div id="practiceRevealText" style="font-size:var(--line-font-size); line-height:1.5;"></div>
+            </div>
+            <div id="practiceFavConfirm" class="lcount" style="display:none; color:var(--accent); margin-bottom:10px;"></div>
+            <div style="display:flex; gap:8px; margin-bottom:10px;">
+              <button id="practiceFavBtn" class="primaryBtn" style="flex:1; background:none; border:1px solid var(--accent); color:var(--accent);">★ Favourite This</button>
+              <button id="practiceSkipBtn" class="primaryBtn" style="flex:1; background:none; border:1px solid var(--line); color:var(--ink);">Skip - Another</button>
+            </div>
+          </div>
+          <button id="practiceNextBtn" class="primaryBtn" style="margin-top:4px; display:none;">Next Scenario</button>
+        </div>
       </div>
 
     </div>
@@ -767,6 +794,41 @@ const DEFAULTS = {
   ]
 };
 
+const CHALLENGE_SCENARIOS = [
+  { text: "You finish a song and the room stays completely quiet.", category: "No Applause", tier: "common" },
+  { text: "You finish a song and most of the room is still looking at their phones.", category: "No Applause", tier: "common" },
+  { text: "Someone requests a song you don't know.", category: "Don't Know It", tier: "common" },
+  { text: "The same person asks for the same song more than once tonight.", category: "Requests: Same Song", tier: "common" },
+  { text: "The first couple of people have just walked in and sat right in front of you.", category: "First People In", tier: "common" },
+  { text: "There's a game on the screen behind you and most of the room is watching that instead of you.", category: "Big Screen", tier: "common" },
+  { text: "The crowd tonight is very small.", category: "Small Crowd", tier: "common" },
+  { text: "You're finishing your first set and the room is only just starting to warm up.", category: "End of Set", tier: "common" },
+  { text: "Someone asks if you know a song that came out very recently.", category: "Requests: Young", tier: "common" },
+  { text: "Someone in the crowd being annoying.", category: "Heckler", tier: "obscure" },
+  { text: "One person claps once, alone, and no one else joins in.", category: "No Applause", tier: "obscure" },
+  { text: "One couple walks in a few minutes before you're due to start, and the room is otherwise empty.", category: "First People In", tier: "obscure" },
+  { text: "Someone is completely focused on the screen and hasn't looked at you once.", category: "Big Screen", tier: "obscure" },
+  { text: "Someone asks if you take tips.", category: "Tips", tier: "common" },
+  { text: "Someone requests a band you don't play covers of.", category: "Bands", tier: "obscure" },
+  { text: "Someone asks for something heavier than what you've been playing all night.", category: "Requests: Same Genre", tier: "common" },
+  { text: "You're finishing the whole night and a few people ask for one more song.", category: "Encore", tier: "common" },
+  { text: "A younger person requests a song you've never heard of.", category: "Requests: Young", tier: "common" },
+  { text: "Someone looks visibly let down when you can't play their request.", category: "Requests: Disappointed", tier: "common" },
+  { text: "You've only got one or two people in the room tonight.", category: "1 or 2 People", tier: "obscure" },
+  { text: "Someone loudly disagrees with a song choice the moment you start playing it.", category: "Heckler", tier: "common" },
+  { text: "Someone holds their phone up to show you a song request.", category: "Requests: Phone", tier: "common" },
+  { text: "Someone looks annoyed when you don't know their request.", category: "Astonished", tier: "common" },
+  { text: "The room is full, but no one is reacting.", category: "No Applause", tier: "common" },
+  { text: "Someone keeps requesting heavy metal.", category: "Requests: Same Genre", tier: "common" },
+  { text: "You notice people eating while you're playing.", category: "Food", tier: "common" },
+  { text: "You need something to fill a silence between songs.", category: "Random Stuff", tier: "obscure" },
+  { text: "You're tuning your guitar and need something to say.", category: "Tuning", tier: "common" },
+  { text: "You've just finished your first song of the night.", category: "Start of Gig", tier: "common" },
+  { text: "You've just finished a set.", category: "End of Set", tier: "common" },
+  { text: "You've just finished the whole gig.", category: "End of Gig", tier: "common" },
+  { text: "You need to retune between songs.", category: "Tuning", tier: "common" },
+  { text: "You get feedback through the PA.", category: "Feedback", tier: "common" }
+];
 
 const THEMES = [
   { key:"amber", name:"Stage Amber", bg:"#0a0a09", accent:"#e2a33d" },
@@ -1673,6 +1735,115 @@ newCatBtn.addEventListener('click', ()=>{
   saveConfig();
   newCatName.value = '';
   renderCustomTab();
+});
+
+/* ---------- Practice Room ---------- */
+let commonBag = [];
+let obscureBag = [];
+let currentScenario = null;
+let shownLinesForScenario = new Set();
+let currentRevealCategory = null;
+let currentRevealText = null;
+
+function shuffle(arr){
+  const copy = arr.slice();
+  for(let i = copy.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+
+function getCategoryLines(category){
+  if(Object.prototype.hasOwnProperty.call(config.customCategories, category)){
+    return config.customCategories[category].lines || [];
+  }
+  return effectiveDefaultLines(category);
+}
+
+function pickScenario(){
+  const commonPool = CHALLENGE_SCENARIOS.filter(s => s.tier === 'common');
+  const obscurePool = CHALLENGE_SCENARIOS.filter(s => s.tier === 'obscure');
+  const wantCommon = (Math.random() < 0.75 && commonPool.length) || !obscurePool.length;
+
+  if(wantCommon && commonPool.length){
+    if(!commonBag.length) commonBag = shuffle(commonPool);
+    return commonBag.pop();
+  }
+  if(!obscureBag.length) obscureBag = shuffle(obscurePool.length ? obscurePool : commonPool);
+  return obscureBag.pop();
+}
+
+function pickRevealLine(category, exclude){
+  let pool = getCategoryLines(category);
+  let actualCategory = category;
+  if(!pool || !pool.length){
+    const allData = activeData();
+    const fallbackCats = Object.keys(allData).filter(c => allData[c] && allData[c].length);
+    if(!fallbackCats.length) return null;
+    actualCategory = fallbackCats[Math.floor(Math.random() * fallbackCats.length)];
+    pool = allData[actualCategory];
+  }
+  const texts = pool.map(item => typeof item === 'object' ? item.text : item);
+  let candidates = texts.filter(t => !exclude.has(t));
+  if(!candidates.length) candidates = texts;
+  const text = candidates[Math.floor(Math.random() * candidates.length)];
+  return { text, category: actualCategory };
+}
+
+function promoteLineToTop(category, text){
+  const pool = getCategoryLines(category) || [];
+  const baseOrder = (config.lineOrder[category] && config.lineOrder[category].length)
+    ? config.lineOrder[category].slice()
+    : pool.map(item => typeof item === 'object' ? item.text : item);
+  const withoutText = baseOrder.filter(t => t !== text);
+  config.lineOrder[category] = [text, ...withoutText];
+  saveConfig();
+}
+
+function startScenario(){
+  currentScenario = pickScenario();
+  shownLinesForScenario = new Set();
+  document.getElementById('practiceIdle').style.display = 'none';
+  document.getElementById('practiceActive').style.display = 'block';
+  document.getElementById('practiceScenarioText').textContent = currentScenario.text;
+  document.getElementById('practiceReveal').style.display = 'none';
+  document.getElementById('practiceRevealBtn').style.display = 'block';
+  document.getElementById('practiceNextBtn').style.display = 'none';
+  document.getElementById('practiceFavConfirm').style.display = 'none';
+}
+
+function showReveal(){
+  const result = pickRevealLine(currentScenario.category, shownLinesForScenario);
+  document.getElementById('practiceFavConfirm').style.display = 'none';
+  if(!result){
+    currentRevealCategory = null;
+    currentRevealText = null;
+    document.getElementById('practiceRevealText').textContent = 'No lines available right now, try enabling a few more categories.';
+    document.getElementById('practiceReveal').style.display = 'block';
+    document.getElementById('practiceRevealBtn').style.display = 'none';
+    document.getElementById('practiceNextBtn').style.display = 'block';
+    return;
+  }
+  currentRevealCategory = result.category;
+  currentRevealText = result.text;
+  shownLinesForScenario.add(result.text);
+  document.getElementById('practiceRevealText').textContent = result.text;
+  document.getElementById('practiceReveal').style.display = 'block';
+  document.getElementById('practiceRevealBtn').style.display = 'none';
+  document.getElementById('practiceNextBtn').style.display = 'block';
+}
+
+document.getElementById('practiceStartBtn').addEventListener('click', startScenario);
+document.getElementById('practiceRevealBtn').addEventListener('click', showReveal);
+document.getElementById('practiceNextBtn').addEventListener('click', startScenario);
+document.getElementById('practiceSkipBtn').addEventListener('click', showReveal);
+document.getElementById('practiceFavBtn').addEventListener('click', ()=>{
+  if(!currentRevealCategory || !currentRevealText) return;
+  promoteLineToTop(currentRevealCategory, currentRevealText);
+  const confirmEl = document.getElementById('practiceFavConfirm');
+  confirmEl.textContent = `Moved to the top of "${currentRevealCategory}" for next time.`;
+  confirmEl.style.display = 'block';
 });
 
 function renderDisplayTab(){
